@@ -1,5 +1,5 @@
 [Core]
-Name = csv_collect
+Name = Collect CSV
 Module = csv_collect
 
 [Documentation]

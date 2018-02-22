@@ -1,0 +1,8 @@
+[Core]
+Name = Triggered Collection
+Module = collect_channel_packets_triggered
+
+[Documentation]
+Author = Lars Oestreicher
+Version = 0.1
+Description = Write the channel data in arrays, channels x time lapse. Each packet is a separate array in a larger set.

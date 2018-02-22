@@ -1,6 +1,6 @@
 
 [Core]
-Name = print
+Name = Print
 Module = print
 
 [Documentation]
