@@ -1,31 +1,32 @@
 #!/usr/bin/env python3.6
 """
-This plugin collects data for deep learning purposes. It utilises a value flag to store the output variable (y_value)
-and saves the polled data in a large nympy array (+ writing it to a text file.
+This plugin collects data for deep learning purposes. It utilises a value flag to store the
+output variable (y_value) and saves the polled data in a large nympy array (+ writing it to
+a text file.
 
+The data is collected in a way that makes it possible to use triggers, such as images, colours,
+etc. The data is collected with timed packets, so as to distinguish intervalsa in connection
+with the presentation of teh visual stimuli.
+
+The trigger mechanism is available in the file displaytrigger.py
 
 """
 # IMPORTS
 #
 import datetime
+import threading
 import timeit
-from dictionary import Dictionary as dict
+from tkinter import ttk
 
 import numpy as np
 
-from tkinter import *
-from tkinter import ttk
-
-import threading
-
-import plugin_interface as plugintypes
-
-import userGUI as main_window
-
+import config as cfg
 import displaytrigger as trig
+import plugin_interface as plugintypes
+from dictionary import Dictionary as dict
 
-class PluginChanCollect(plugintypes.IPluginExtended):
 
+class PluginChanCollectTrig(plugintypes.IPluginExtended):
     __main_instance__ = None
 
     def __init__(self, file_name="chanpackets", delim=",", verbose=True):
@@ -34,69 +35,105 @@ class PluginChanCollect(plugintypes.IPluginExtended):
         #
         self.y_value = 0
 
-        __main_instance__ = self
+        self.activated = False
 
+        self.trigger = trig.StudyGui()
+
+        # The triggerval variable keeps track of which of the phases we are in.
+        # Always start with the triggerval set to black = 0
+        #
+        self.trigval = 0
+
+        # Set current time at the initialisation
+        #
         now = datetime.datetime.now()
 
         self.format = "NP"
 
-        self.panel = main_window.UserGUI.__pluginSpace__
+        self.panel = cfg.pluginSpace
 
+        # Initialise all the data about this session.
+        #
         self.time_stamp = '%d-%d-%d_%d-%d-%d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
-        self.file_name = self.time_stamp
+
+        # We use two files to store the data (the sensor data) and the result (the trigger values).
+        #
+        self.data_file_name = file_name + "-data-" + self.time_stamp + ".csv"
+        self.result_file_name = file_name + "-result-" + self.time_stamp + ".csv"
+
+        # Store the starting time for the session
+        #
         self.start_time = timeit.default_timer()
         self.delim = delim
-        self.verbose = False
+
+        # The first row in each package has to be initiated in a special way.
+        #
         self.first_row = True
 
         # This is for collecting the data from the openBCI session in string form.
         #
-        self.data_arr = ""
+        self.data_arr = ''
 
         # Collecting real variables as well.
         #
         self.data_arr_np = []
+
+        # We use a temporary variable to collect the packages
+        #
         self.arr_collector = []
 
-        self.start_time = timeit.default_timer()
         self.t2 = 0.0
+
         self.break_time = 0.3
 
-        self.pack_size = 30
+        # The packet size is normally set to 16, since we are using 16 channels. Should we use just 8 channels,
+        # (the Cyton board only) we need to set this number to 8 as well. The packets should be of the size x * x in order for
+        # certain neural network methods to work.
+        #
+        self.pack_size = cfg.sensornumber - 1
+
+        # We need to have a counter for the number of packets we have collected in the current sequence
+        #
         self.no_of_packets = 0
 
+    # ==================================================
+    # This is called when the plugin is activated.
+    #
     def activate(self):
 
-        self.trigger = trig.Displaytrigger()
-
-        if len(self.args) > 0:
-            if 'no_time' in self.args:
-                self.file_name = self.args[0]
-            else:
-                self.file_name = self.args[0] + '_' + self.file_name
-            if 'verbose' in self.args:
-                self.verbose = True
-
-        self.file_name = self.file_name + '.csv'
-
-        print("Will export data to:" + self.file_name + ".npy/csv")
-
-        # self.data_arr_np = np.array([])
-
-        self.data_arr = '['
-
-        # Create separate control window.
+        # To avoid multiple activations causing multiple windows and menus.
         #
-        win_thread = threading.Thread(target=self.open_control_window)
-        win_thread.start()
+        if not self.activated:
 
-        self.trigval = self.trigger.connect()
-        self.trigger.displaythread.start()
+            self.activated = True
 
-        # Open the file in append mode
-        #
-        with open(self.file_name + ".csv", 'a') as f:
-            f.write('%' + self.time_stamp + '\n')
+            if len(self.args) > 0:
+                if 'no_time' in self.args:
+                    self.data_file_name = self.args[0]
+                else:
+                    self.data_file_name = self.args[0] + '_' + self.data_file_name
+                if 'verbose' in self.args:
+                    self.verbose = True
+
+            # self.data_file_name = self.data_file_name + '.csv'
+
+            print("Will export data to:" + self.data_file_name)
+
+            # self.data_arr_np = np.array([])
+
+               # level 1 square bracket. This is encapsulating the whole data pack.
+
+            # Create separate control window, in a separate thread.
+            #
+            win_thread = threading.Thread(target=self.open_control_window)
+            win_thread.start()
+
+            self.trigger.studyStart()
+
+            # Open the file in append mode
+            #
+            with open(self.data_file_name, 'a') as f:
+                f.write('%' + self.time_stamp + '\n')
 
     # The deactivate function is used to close down the plugin in a controlled way.
     #
@@ -112,13 +149,17 @@ class PluginChanCollect(plugintypes.IPluginExtended):
         # write last array, and then close the file. If written in TEXT format, the result is a string. Otherwise
         # it is saved in numpy format.
         #
-        with open(self.file_name + ".csv", 'a') as f:
+        with open(self.data_file_name, 'a') as f:
             f.write(self.data_arr)
             f.close()
 
-        np.save(self.file_name + "npy", np.asarray(self.arr_collector))
+        with open(self.result_file_name, 'a') as f:
+            f.write(self.data_arr)
+            f.close()
 
-        print(dict.get_string('plugclose') + self.file_name)
+        np.save(self.data_file_name + "npy", np.asarray(self.arr_collector))
+
+        print(dict.get_string('plugclose') + self.data_file_name)
         print(dict.get_string('checkarray'))
 
         return
@@ -126,48 +167,78 @@ class PluginChanCollect(plugintypes.IPluginExtended):
     def show_help(self):
         print("Optional argument: [filename] (default: collect.csv)")
 
+    #
+    # ======================================================
+    # This is called from the openBCI-streamer. This part has to be as fast as possible.
+    #
+    def __call__(self, sample):
 
-    def __call__(self,sample):
+        # if not cfg.study_running:  # If we do not run the study, we just return from the call.
+        #     return
+        #
+        # If no image is shown (i.e.) black background, then we have set the trigger value to 0 (which equals the
+        # background data type).
+        #
+        if not cfg.image_shown:
+            self.trigval = 0
 
-        t = timeit.default_timer() - self.start_time
+        # If we start with a new image, the trigvalue is reset to one, and then the new_image flag is reset to False
+        #
+        if cfg.new_image:
+            self.trigval = 1
+            cfg.new_image = False
+
+        # Calculate the time passed since start.
+        #
+        self.t = timeit.default_timer() - self.start_time
 
         # print(timeSinceStart|Sample Id)
-        #
+        # =========================================================================
         # For every first row in the array, we will perform some initialisations.
         #
         if self.first_row:
-            self.t2 = t
+            self.t2 = self.t
+
+            # print(self.t)
 
             # Initialise each subarray with the proper delimiters
             #
-            self.data_arr += '['
+            self.data_arr = '['  # First row has an extra '[' added to contain the pack. Level 2
             self.data_arr_np = []
 
             self.first_row = False
 
-        # Each row is constructed separately. ========================
+        # Each row is then constructed separately and added to the resulting array.
+        # ========================================================================
+        # Since we use extra information about the row, we put it into an extra
+        # list level for the string version.
         #
-        row = '['
-        int_row = [ ]
+        # [ 1
+        #   [2 [3 [4 datalist]4,
+        #      [datalist],...]3,
+        #      [resultlist] ]2,
+        #
+        #   [2 [[datalist],
+        #       [datalist],...],
+        #      [resultlist]],
+        # ]1
+        #
 
-        if self.verbose:
-            row += str(t)
-            row += self.delim
-            row += str(sample.id)
-            row += self.delim
+        row = '['   # Level 4
+        int_row = []
 
+        # Checking the data and adding it into rows, both numeric and string-form in parallell.
+        #
         for i in sample.channel_data:
-            int_row.append(abs(i))          # TODO check the polarity.
-            row += str(abs(i))              # TODO likewise
-            row += self.delim
+            int_row.append(abs(i))  # TODO check the polarity.
+            row += str(abs(i))      # TODO likewise
+            row += self.delim       # Default delimiter is ','
 
-        print("Row:")
-        print(int_row)
+        # print("Row:")
+        # print(int_row)
 
-        if self.verbose:
-            row += "CSV: %f | %d" % (t, sample.id)
+        row = row[:-1] + '],\n' # Level 4. The slicing is necessary to take away a superfluous ',' before the last ']'
 
-        row += '],\n'
         #
         # END of row =========================
 
@@ -175,35 +246,54 @@ class PluginChanCollect(plugintypes.IPluginExtended):
         #
         self.no_of_packets += 1
 
+        # Add the string version of the row.
+        #
         self.data_arr += row
 
         self.data_arr_np.append(int_row)
 
         # Check if we have passed a chunk, depending on the set time limit.
         #
-        deltat = t - self.t2
+        delta_t = self.t - self.t2
 
-        # If the number of chunks in the packet is big enough, we pack it into a subarray.
+        # If the number of chunks in the packet is big enough, we pack the current string
+        # into a subarray.
+        #
+        # The size is determined by the number of electrodes used on the board (normally 16)
         #
         if self.no_of_packets > self.pack_size:
 
-            # TODO check this when running.
+            # TODO check this when running
+            #
+            # Append the current chunk to the array, and then append the trigvalue string to it.
             #
             self.arr_collector.append(self.data_arr_np.append(self.trigval))
+            self.data_arr = self.data_arr[:-2] + '],\n'
 
-            print("Lump: ")
-            print(self.data_arr_np)
-
-            self.data_arr = self.data_arr[:-2] + ', ' + str(self.trigval) + '],\n'
-
-            self.first_row = True
-
-            with open(self.file_name, 'a') as f:
+            # Write the package content to the file.
+            #
+            with open(self.data_file_name, 'a') as f:
                 f.write(self.data_arr)
 
-            self.bLabel['text'] = str(deltat)
+            # Write the corresponding trigger value
+            #
+            with open(self.result_file_name, 'a') as f:
+                f.write(cfg.triggervalstr[self.trigval] + '\n')
 
-            self.no_packets = 0
+            # Level 3 and 2
+            #
+            # We just separate the eight first samples in each bunch into separate patterns
+            #
+            if self.trigval < 8:
+                self.trigval += 1
+
+            # If we start on a new package, we need to have a new first row.
+            #
+            self.first_row = True
+
+            self.bLabel['text'] = str(delta_t)
+
+            self.no_of_packets = 0
 
     # def second__call__(self, sample):
     #     t = timeit.default_timer() - self.start_time
@@ -263,7 +353,7 @@ class PluginChanCollect(plugintypes.IPluginExtended):
     #         self.data_arr = self.data_arr[:-2] +'],\n'
     #         self.first_row = True
     #
-    #         with open(self.file_name, 'a') as f:
+    #         with open(self.data_file_name, 'a') as f:
     #             f.write(self.data_arr)
     #
     #         self.bLabel['text'] = str(deltat)
@@ -272,7 +362,7 @@ class PluginChanCollect(plugintypes.IPluginExtended):
     # TODO check if this needs to specifically threaded.
     #
 
-
+    #
     def open_control_window(self):
 
         # ========================

@@ -6,6 +6,7 @@ class PluginPrint(plugintypes.IPluginExtended):
 	
 	# called with each new sample
 	def __call__(self, sample):
+		print(sample)
 		if sample:
             # print impedance if supported
 			if self.imp_channels > 0:

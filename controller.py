@@ -3,11 +3,12 @@
 # IMPORT
 #
 import logging
-
+import config as cfg
 from yapsy.PluginManager import PluginManager
 
 # Importing two static objects.
 #
+
 from dictionary import Dictionary as dict
 
 # =======================
@@ -19,15 +20,15 @@ manager = PluginManager()
 #
 logging.basicConfig(level=logging.ERROR)
 
-
 class Controller(object):
     """
-    The controller is responsible for handling all the preparations of the reader, and the reading from the model.
-    The model is in the bci board, given as input to the class.
+    The controller is responsible for handling all the preparations of the reader,
+    as well as reading from the model.
 
+    The model is in the bci board, given as input to the class.
     """
 
-    def __init__(self, gui, bd, sets):
+    def __init__(self, gui):
 
         # Initialising the plugin manager
         #
@@ -41,50 +42,43 @@ class Controller(object):
         #
         self.gui = gui
 
-        # Here is the instantiation of the board.
-        #
-        self.board = bd
-
-        self.settings = sets
-
         # Set of callback functions (plug-ins) that have been acitvated.
         #
         self.callback_list = []
         self.plug_list = []
 
-
-
-
     # ============================================================
     # Internal functions for the controller. Most of these will be activated from the GUI. These are marked by the
     # type of initialisation, e.g. <MENU>
     #
+    def connect_board(self):
+        self.model = cfg.current_board.OpenBCIBoard(self, self.gui)
+        self.activate_plugins()
 
+    """
     # Initialisation for the board, and setting it up for commands.
     #
     # <MENU, BUTTON>
     #
-    def connect_board(self):
-        self.model = self.board.OpenBCIBoard(self, self.gui, self.settings)
-        self.activate_plugins()
-
+    """
+    #
     # <MENU>
     #
     def start_streaming(self):
         self.model.start_streaming_thread(self.callback_list)
 
+    #
     # <MENU>
     #
     def set_channels(self):
         pass
+
     def stop(self):
         self.model.stop()
 
     # Initialising the active channels.
     #
-
-
-
+    #
     # Method used to activate the plugins. If any plugin is not responding properly, an error message is generated.
     # This function is used initially, but can also be used during a run, for example to add new plugins,
     # if something interesting occurs.
@@ -96,10 +90,7 @@ class Controller(object):
 
         # Fetch selected plugins from settings, try to activate them, add to the list if OK
         #
-        plugs = self.settings.get_plugins()
-
-
-        for plug_candidate in plugs:
+        for plug_candidate in cfg.plugins:
 
             # first value: plugin name, then optional arguments
             #
@@ -119,10 +110,10 @@ class Controller(object):
             else:
                 print("\nActivating [ " + plug_name + " ] plugin...")
                 if not plug.plugin_object.pre_activate(plug_args,
-                                                       sample_rate=self.model.get_sample_rate(),
-                                                       eeg_channels=self.model.get_nb_eeg_channels(),
-                                                       aux_channels=self.model.get_nb_aux_channels(),
-                                                       imp_channels=self.model.get_nb_imp_channels()):
+                                                       sample_rate = self.model.get_sample_rate(),
+                                                       eeg_channels = self.model.get_nb_eeg_channels(),
+                                                       aux_channels = self.model.get_nb_aux_channels(),
+                                                       imp_channels = self.model.get_nb_imp_channels()):
                     print("Error while activating [ " + plug_name + " ], check output for more info.")
                 else:
                     print("Plugin [ " + plug_name + "] added to the list")

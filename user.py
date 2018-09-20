@@ -271,7 +271,7 @@ https://github.com/OpenBCI/OpenBCI_Python")
                     board.stop()
                     rec = True
                     flush = True
-                if rec == False:
+                if not rec:
                     print("Command not recognized...")
 
             elif s:

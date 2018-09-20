@@ -246,7 +246,7 @@ class OpenBCIBoard(object):
                 for call in callback:
                     call(sample)
 
-            if (lapse > 0 and timeit.default_timer() - start_time > lapse):
+            if (0 < lapse < timeit.default_timer() - start_time):
                 self.stop()
             if self.log:
                 self.log_packet_count = self.log_packet_count + 1

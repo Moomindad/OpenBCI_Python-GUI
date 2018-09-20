@@ -38,6 +38,8 @@ import threading
 import time
 import timeit
 
+import config as cfg
+
 import numpy as np
 import serial
 
@@ -99,9 +101,7 @@ class OpenBCIBoard(object):
 
     def __init__(self,
                  ctr,
-                 win,
-                 sets
-
+                 win
                  # The following values are now provided through the static settings object. This object
                  # can be saved and restored.
                  #
@@ -131,21 +131,21 @@ class OpenBCIBoard(object):
         # The settings are shared between the GUI, the controller and the model. It is created and initialised in the
         # GUI (userGUI.py).
         #
-        self.settings = sets
+        # self.settings = sets
 
         # Starting by finding the port, if it is not given by the GUI
         #
-        if not self.settings.get_port():
-            self.settings.set_port(self.find_port())
+        if not cfg.portUsed:
+            portUsed = self.find_port()
 
         # ========================
         # might be handy to know API
         #
-        print(dict.get_string('v3connect') % self.settings.get_port())
+        print(dict.get_string('v3connect') % cfg.portUsed)
 
-        self.ser = serial.Serial(port=self.settings.get_port(),
-                                 baudrate=self.settings.get_baudrate(),
-                                 timeout=self.settings.get_timeout())
+        self.ser = serial.Serial(port=cfg.portUsed,
+                                 baudrate= cfg.baudrate,
+                                 timeout=cfg.timeout)
 
         win.log_mess(dict.get_string('estserial'))
 
@@ -194,10 +194,9 @@ class OpenBCIBoard(object):
         """
         Returns the version of the board
         """
-        return self.settings.get_board_type()
+        return cfg.boardType
 
     def set_impedance(self, flag):
-
         """ Enable/disable impedance measure. Not implemented at the moment on Cyton. """
         return
 
@@ -214,13 +213,13 @@ class OpenBCIBoard(object):
         return self.ser.inWaiting()
 
     def get_sample_rate(self):
-        if self.settings.get_daisy():
+        if cfg.daisyBoard:
             return SAMPLE_RATE / 2
         else:
             return SAMPLE_RATE
 
     def get_nb_eeg_channels(self):
-        if self.settings.get_daisy():
+        if cfg.daisyBoard:
             return self.eeg_channels_per_sample * 2
         else:
             return self.eeg_channels_per_sample
@@ -278,11 +277,12 @@ class OpenBCIBoard(object):
             # read current sample
             #
             sample = self._read_serial_binary()
+
             #
             # If a daisy module is attached, wait to concatenate two samples (main board + daisy)
             # before passing it to callback
             #
-            if self.settings.get_daisy():
+            if cfg.daisyBoard:
                 #
                 # Odd sample: daisy sample, save for later (tilde is the invert operator)
                 #
@@ -308,7 +308,7 @@ class OpenBCIBoard(object):
 
             if lapse > 0 and timeit.default_timer() - start_time > lapse:
                 self.stop()
-            if self.settings.get_logging():
+            if cfg.logging:
                 self.log_packet_count = self.log_packet_count + 1
 
     """
@@ -400,7 +400,7 @@ class OpenBCIBoard(object):
 
                     # finally we apply a proper scaling (if desired).
                     #
-                    if self.settings.get_scaling():
+                    if cfg.scaling:
                         channel_data.append(myInt * scale_fac_uVolts_per_count)
                     else:
                         channel_data.append(myInt)
@@ -418,7 +418,7 @@ class OpenBCIBoard(object):
                     acc = struct.unpack('>h', read(2))[0]
                     log_bytes_in = log_bytes_in + '|' + str(acc)
 
-                    if self.settings.get_scaling():
+                    if cfg.scaling:
                         aux_data.append(acc * scale_fac_accel_G_per_count)
                     else:
                         aux_data.append(acc)
@@ -450,7 +450,7 @@ class OpenBCIBoard(object):
         self.streaming = False
         self.ser.write(b's')
         self.ctrl.clean_up()
-        if self.settings.get_logging():
+        if cfg.logging:
             logging.warning('sent <s>: stopped streaming')
 
     def disconnect(self):
@@ -470,7 +470,7 @@ class OpenBCIBoard(object):
     # Method used to set the warning system started.
     #
     def warn(self, text):
-        if self.settings.get_logging():
+        if cfg.logging:
             #
             # log how many packets where sent succesfully in between warnings
             #
@@ -687,21 +687,21 @@ class OpenBCIBoard(object):
                 self.ser.write(b'&')
             if channel is 8:
                 self.ser.write(b'*')
-            if channel is 9 and self.settings.get_daisy:
+            if channel is 9 and cfg.daisyBoard:
                 self.ser.write(b'Q')
-            if channel is 10 and self.settings.get_daisy:
+            if channel is 10 and cfg.daisyBoard:
                 self.ser.write(b'W')
-            if channel is 11 and self.settings.get_daisy:
+            if channel is 11 and cfg.daisyBoard:
                 self.ser.write(b'E')
-            if channel is 12 and self.settings.get_daisy:
+            if channel is 12 and cfg.daisyBoard:
                 self.ser.write(b'R')
-            if channel is 13 and self.settings.get_daisy:
+            if channel is 13 and cfg.daisyBoard:
                 self.ser.write(b'T')
-            if channel is 14 and self.settings.get_daisy:
+            if channel is 14 and cfg.daisyBoard:
                 self.ser.write(b'Y')
-            if channel is 15 and self.settings.get_daisy:
+            if channel is 15 and cfg.daisyBoard:
                 self.ser.write(b'U')
-            if channel is 16 and self.settings.get_daisy:
+            if channel is 16 and cfg.daisyBoard:
                 self.ser.write(b'I')
         # Commands to set toggle to off position
         elif toggle_position == 0:
@@ -721,21 +721,21 @@ class OpenBCIBoard(object):
                 self.ser.write(b'7')
             if channel is 8:
                 self.ser.write(b'8')
-            if channel is 9 and self.settings.get_daisy():
+            if channel is 9 and cfg.daisyBoard:
                 self.ser.write(b'q')
-            if channel is 10 and self.settings.get_daisy():
+            if channel is 10 and cfg.daisyBoard:
                 self.ser.write(b'w')
-            if channel is 11 and self.settings.get_daisy:
+            if channel is 11 and cfg.daisyBoard:
                 self.ser.write(b'e')
-            if channel is 12 and self.settings.get_daisy:
+            if channel is 12 and cfg.daisyBoard:
                 self.ser.write(b'r')
-            if channel is 13 and self.settings.get_daisy:
+            if channel is 13 and cfg.daisyBoard:
                 self.ser.write(b't')
-            if channel is 14 and self.settings.get_daisy:
+            if channel is 14 and cfg.daisyBoard:
                 self.ser.write(b'y')
-            if channel is 15 and self.settings.get_daisy:
+            if channel is 15 and cfg.daisyBoard:
                 self.ser.write(b'u')
-            if channel is 16 and self.settings.get_daisy:
+            if channel is 16 and cfg.daisyBoard:
                 self.ser.write(b'i')
 
     #
@@ -762,9 +762,9 @@ class OpenBCIBoard(object):
         openbci_port = ''
         for port in ports:
             try:
-                s = serial.Serial(port=self.settings.get_port(),
-                                  baudrate=self.settings.get_baudrate(),
-                                  timeout=self.settings.get_timeout)
+                s = serial.Serial(port = cfg.portUsed,
+                                  baudrate = cfg.baudrate,
+                                  timeout = cfg.timeoutt)
                 s.write(b'v')
                 openbci_serial = self.openbci_id(s)
                 s.close()

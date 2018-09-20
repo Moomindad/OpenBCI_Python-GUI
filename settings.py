@@ -42,6 +42,11 @@ class BCIsettings(object):
 
         self.plugins = [['print']]
 
+        # Temporary settings are set to null, initially.
+
+        self.main_window = None
+
+
     # =======================
     # Setters and getters
     #
@@ -118,20 +123,32 @@ class BCIsettings(object):
 
     def set_plugins(self, plugins):
         self.plugins = plugins
-
         print("Stored plugins:")
         print(self.get_plugins())
 
+    def set_main_window(self, win):
+        self.main_window = win
+
+    def get_main_window(self, win):
+        return self.main_window
+
     # ===========================================================
-    # We need to be able to save the settings.
+    # We need to be able to save the settings.1
     #
     def save_settings(self):
         with open(self.fileName, 'wb') as output:
             pickle.dump(output, -1)
-
 
     # Restoring the settings is a different matter.
     #
     def restore_settings(self):
         with open(self.fileName, 'rb') as f:
             return pickle.load(f)
+
+# This is where the settings object is created.
+#
+settings = None
+
+def init():
+    global settings
+    settings = BCIsettings()

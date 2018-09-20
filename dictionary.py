@@ -44,10 +44,11 @@ class Dictionary(object):
         ['packets', 'Number of packets in bunch: ', 'Antal paket i bunten: '],
         ['plugsclose', 'Closing, data saved to: ', "Stannar dataströmmen, data sparat på: "],
         ['plugs', 'Available Plugins', 'Tilläggsprogram'],
+        ['selchan','Select channels to use:', 'Välj kanaler som ska användas:'],
         ['selport', 'Select port', 'Välj port'],
         ['shapes', 'Shape Display', 'Testfönster'],
         ['stallwarn', 'Device appears to be stalled. Quitting...',
-         'Strömmen verkar ha stannat av. Avslutar!'],
+         'Dataströmmen verkar ha stannat av. Avslutar!'],
         ['tooltipport', 'For Cyton, port to connect to OpenBCI Dongle \n' +
          '(e.g., "/dev/ttyUSB0" or "/dev/tty.usbserial-*"). For\n' +
          'Ganglion, MAC address of the board. For both, \n' +
@@ -68,7 +69,7 @@ class Dictionary(object):
         for item in Dictionary.dic:
             if item[0] == key:
                 return item[Dictionary.lang]
-        return "§§§ Missing text §§§"
+        return "XXX Missing text XXX --> " + key
 
     # ============================================
     # Sets the language of the User Interface

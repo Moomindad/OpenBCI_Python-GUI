@@ -6,11 +6,14 @@ the original implementation.
 
 September 13 2017
 @author Lars Oestreicher
-
 """
 # ===================
 # Imports
 # ===================
+#
+# Manage the global settings in a Python manner.
+#
+import config as cfg
 #
 # Imports for OpenBCI
 #
@@ -31,15 +34,12 @@ from yapsy.PluginManager import PluginManager
 #
 from dictionary import Dictionary as dict
 
-import settings
+# import settings as sets # This module is not initialised upon creation.
 
 from Utilities import *
 
 import controller as ctrl
 
-# This import will be overridden later in the application.
-#
-import open_bci_v4 as bci
 
 # ==============================================================================
 # Main script beginning
@@ -50,16 +50,16 @@ import open_bci_v4 as bci
 #
 class UserGUI(object):
 
-    __pluginSpace__ = None
+    cfg.pluginSpace = None
 
     def __init__(self):
 
-        # Initialising the plugins
+        # sets.init()
+        # global config
+        # config = configparser.ConfigParser()
+        # config.sections()
         #
-        self.manager = PluginManager()    # Yapsy pluginmanager is used for plugins.
-        self.plugins_paths = ["plugins"]  # Make sure the path for the plugins works
-        self.manager.setPluginPlaces(self.plugins_paths)
-        self.manager.collectPlugins()
+        # config.read("bci.ini")
 
         # A list is used to keep track of the checkboxes for the channels of the Daisy board
         #
@@ -69,23 +69,74 @@ class UserGUI(object):
         #
         self.ctr = None
 
-        self.sets = settings.BCIsettings()
-
         # ========================
         # Create window instance
         #
         self.win = tk.Tk()
         self.win.title(dict.get_string('wintitle'))
-        #
+
+        cfg.main_window = self.win
+
         # ==========================
         # Set minimal logging level
         #
         logging.basicConfig(level=logging.ERROR)
-        #
+
         # =========================
         # Creating the GUI
         # =========================
+
+        # ==========================
+        # Adding menus
+        # ==========================
+        # Creating a Menu Bar
         #
+        self.menuBar = Menu(self.win)
+        self.win.config(menu=self.menuBar)
+
+        # Add menu items
+        #
+        self.fileMenu = Menu(self.menuBar, tearoff=0)
+        self.fileMenu.add_command(label="New Recording", command=self.new_rec)
+        self.fileMenu.add_command(label="Save Recording", command=self.save_rec, accelerator="Cmd+S")
+        self.fileMenu.add_command(label="Reset", command=self.reset)
+        self.fileMenu.add_command(label="Exit", command=quit)
+        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
+
+        # Add an actions menu
+        #
+        self.actionMenu = Menu(self.menuBar, tearoff=1)
+        self.actionMenu.add_command(label="Initialise board", command=self.connect_board, accelerator="Cmd+I")
+        self.actionMenu.add_command(label="Start streaming", command=self.start_streaming, accelerator="Cmd+B")
+        self.actionMenu.add_command(label="Stop streaming", command=self.stop_streaming, accelerator="Cmd+K")
+        self.menuBar.add_cascade(label="Actions", menu=self.actionMenu)
+
+        # Add a utilities menu
+        #
+        self.utilMenu = Menu(self.menuBar, tearoff=0)
+        self.utilMenu.add_command(label="Save Settings", command=self.save_settings)
+        self.utilMenu.add_command(label="Restore Settings", command=self.restore_settings)
+        self.menuBar.add_cascade(label="Utilities", menu=self.utilMenu)
+
+        self.pluginMenu = Menu(self.menuBar, tearoff=0)
+        self.menuBar.add_cascade(label="Plugins", menu=self.pluginMenu)
+
+        cfg.plugin_menu = self.pluginMenu
+
+        # Add another Menu to the Menu Bar and an item
+        #
+        self.helpMenu = Menu(self.menuBar, tearoff=0)
+        self.helpMenu.add_command(label="About")
+        self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
+        #
+
+        # Initialising the plugins
+        #
+        self.manager = PluginManager()  # Yapsy pluginmanager is used for plugins.
+        self.plugins_paths = ["plugins"]  # Make sure the path for the plugins works
+        self.manager.setPluginPlaces(self.plugins_paths)
+        self.manager.collectPlugins()
+
         # =========================
         # Create framed containers to hold widgets
         #
@@ -122,15 +173,12 @@ class UserGUI(object):
         # Space for information from plugins.
         #
         self.pluginsFrame = ttk.LabelFrame(self.win, text="Plugin settings")
-        self.pluginsFrame.grid(column=0, row=6, padx=20, columnspan=5, sticky=tk.S)
-
-
+        self.pluginsFrame.grid(column=0, row=5, padx=20, columnspan=5, sticky=tk.S)
 
         # Using a trick to let the plugins know about the window for plugin settings.
         # We will normally just have a single window instance for each run.
         #
-        UserGUI.__plugin_space__ = self.pluginsFrame
-
+        cfg.pluginSpace = self.pluginsFrame
 
         # =========================
         # Add a text field for messages from the Open BCI module.
@@ -184,12 +232,9 @@ class UserGUI(object):
 
         # Check which board type we are using. Ganglion or Cyton with ot without Daisy
         #
-        self.ganglionBoard = tk.Radiobutton(self.labelsFrame3, text='Ganglion', variable=self.board,
-                                            command=self.rb_detected, value=1)
-        self.cytonBoard = tk.Radiobutton(self.labelsFrame3, text='Cyton', variable=self.board, command=self.rb_detected,
-                                         value=2)
-        self.daisyBoard = tk.Checkbutton(self.labelsFrame3, text='With Daisy',
-                                         variable=self.dboard, command=self.rb_detected)
+        self.ganglionBoard = tk.Radiobutton(self.labelsFrame3, text='Ganglion', variable=self.board, command=self.rb_detected, value = 1)
+        self.cytonBoard = tk.Radiobutton(self.labelsFrame3, text='Cyton', variable=self.board, command=self.rb_detected, value = 2 )
+        self.daisyBoard = tk.Checkbutton(self.labelsFrame3, text='With Daisy', variable=self.dboard, command=self.rb_detected)
 
         self.cytonBoard.grid(column=0, row=2, columnspan=2, sticky=tk.W)
         self.ganglionBoard.grid(column=0, row=1, columnspan=2, sticky=tk.W)
@@ -199,7 +244,7 @@ class UserGUI(object):
                                       command=self.log_enabled)
         self.logging.grid(column=0, row=0)
 
-        # A Combobox is used to select the port.
+        # A Combobox is used to select the port. The value is stored in the portVal variable.
         #
         self.portVal = tk.StringVar()
 
@@ -211,9 +256,10 @@ class UserGUI(object):
         self.aCombobox.current(0)
         self.set_port("test")
 
-        # Make sure that Cytonboard is selected by default.
+        # Make sure that Cytonboard is selected by default
         #
         self.cytonBoard.invoke()
+        self.rb_detected()
 
         # =========================
         # Adding tooltips to the GUI widgets.
@@ -237,10 +283,10 @@ class UserGUI(object):
             self.dchan_var.append(dname)
 
             self.chan_val.append(IntVar())
-            self.chan_val[chan - 1].set(self.sets.get_channels()[chan - 1])
+            self.chan_val[chan - 1].set(cfg.channels[chan - 1])
 
             self.dchan_val.append(IntVar())
-            self.dchan_val[chan - 1].set(self.sets.get_dchannels()[chan - 1])
+            self.dchan_val[chan - 1].set(cfg.dchannels[chan - 1])
 
             chan_check = tk.Checkbutton(self.labelsFrame6, text=name, variable=self.chan_val[chan - 1])
             chan_check.grid(row=chan + 1, column=0, sticky=tk.W)
@@ -308,45 +354,6 @@ class UserGUI(object):
             i = i + 1
         self.collect_plugins()
 
-        # ==========================
-        # Adding menus
-        # ==========================
-
-        # Creating a Menu Bar
-        #
-        self.menuBar = Menu(self.win)
-        self.win.config(menu=self.menuBar)
-
-        # Add menu items
-        #
-        self.fileMenu = Menu(self.menuBar, tearoff=0)
-        self.fileMenu.add_command(label="New Recording", command=self.new_rec)
-        self.fileMenu.add_command(label="Save Recording", command=self.save_rec, accelerator="Cmd+S")
-        self.fileMenu.add_command(label="Reset", command=self.reset)
-        self.fileMenu.add_command(label="Exit", command=quit)
-        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
-
-        # Add an actions menu
-        #
-        self.actionMenu = Menu(self.menuBar, tearoff=1)
-        self.actionMenu.add_command(label="Initialise board", command=self.connect_board, accelerator="Cmd+I")
-        self.actionMenu.add_command(label="Start streaming", command=self.start_streaming, accelerator="Cmd+B")
-        self.actionMenu.add_command(label="Stop streaming", command=self.stop_streaming, accelerator="Cmd+K")
-        self.menuBar.add_cascade(label="Actions", menu=self.actionMenu)
-
-        # Add a utilities menu
-        #
-        self.utilMenu = Menu(self.menuBar, tearoff=0)
-        self.utilMenu.add_command(label="Save Settings", command=self.save_settings)
-        self.utilMenu.add_command(label="Restore Settings", command=self.restore_settings)
-        self.menuBar.add_cascade(label="Utilities", menu=self.utilMenu)
-
-        # Add another Menu to the Menu Bar and an item
-        #
-        self.helpMenu = Menu(self.menuBar, tearoff=0)
-        self.helpMenu.add_command(label="About")
-        self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
-
         self.log_mess("GUI Ready!")
 
     # ===============
@@ -358,12 +365,12 @@ class UserGUI(object):
         # First we try for the Cyton board, and then set check for the Daisy board addition
         #
         if self.board.get() == 2:
-            self.sets.set_board_type("Cyton")
-            self.sets.set_daisy(self.dboard.get())
+            cfg.boardType = "Cyton"
+            cfg.daisyBoard = self.dboard.get()
 
             # If daisy board is not used, we can't use those channels.
             #
-            if self.sets.get_daisy():
+            if cfg.daisyBoard:
                 for chan in self.dchancheckboxes:
                     chan.config(state="active")
             else:
@@ -379,7 +386,9 @@ class UserGUI(object):
             #
             import open_bci_v4 as bci
 
-            self.ctr = ctrl.Controller(self, bci, self.sets)
+            cfg.current_board = bci
+
+            self.ctr = ctrl.Controller(self)
         #
         # Next we try for the ganglion board (which unfortunately does not work for the mac)
         # due to problems with the Bluepy library.
@@ -387,10 +396,11 @@ class UserGUI(object):
         if self.board.get() == 1:
             #
             import open_bci_ganglion as bci
-            self.ctr = ctrl.Controller(self, bci, self.sets)
+            self.ctr = ctrl.Controller(self, bci)
             #
-            self.sets.set_daisy(False)
-            self.sets.set_board_type("Ganglion")
+            cfg.daisyBoard = False
+            cfg.boardType = "Ganglion"
+
             # TODO: FIX THE BLUETOOTH LOW ENERGY LIBRARY for THE GANGLION BOARD
             # The BluePy Library does not work in the Mac Python environment.
             #
@@ -415,9 +425,9 @@ class UserGUI(object):
         self.collect_settings_data()
 
         # Since the type of board is selected in the user interface but the controller is repsonsible for its use, we
-        # send the bci variable as it is without instantiating the bard here.
+        # send the bci variable as it is without instantiating the board here.
         #
-        self.ctr = ctrl.Controller(self, bci)
+        self.ctr = ctrl.Controller(self)
 
 
     # ===============
@@ -436,7 +446,7 @@ class UserGUI(object):
 
     def set_port(self, event):
         self.log_mess(self.portVal.get())
-        self.sets.set_port(self.portVal.get())
+        cfg.portUsed = self.portVal.get()
 
     def stop_streaming(self):
         self.ctr.stop()
@@ -460,17 +470,16 @@ class UserGUI(object):
 
     def log_enabled(self):
         if self.logP.get():
-            self.sets.set_logging(TRUE)
+            cfg.logging = True
             self.log_mess("Logging enabled")
         else:
-            self.sets.set_logging(FALSE)
+            cfg.logging = False
             self.log_mess("Logging disabled")
 
     # ===========================================
     # Collecting all settings from the interface.
     #
     def collect_settings_data(self):
-
         self.collect_channels()
         self.collect_plugins()
 
@@ -486,9 +495,9 @@ class UserGUI(object):
                 else:
                     plugs.append([self.plugin_var[i], self.arg_var[i].get()])
 
-        self.sets.set_plugins(plugs)
+        cfg.plugins = plugs
 
-        print(self.sets.get_plugins())
+        # print(settings.get_plugins())
 
     def get_plugin_space(self):
         return self.pluginsFrame
@@ -512,25 +521,24 @@ class UserGUI(object):
             else:
                 dchans.append(0)
 
-        self.sets.set_channels(chans)
-        self.sets.set_dchannels(dchans)
+        cfg.channels = chans
+        cfg.dchannels = dchans
         print(chans)
         print(dchans)
-
 
     # ==================================================
     # We can store the settings if they are complicated.
     #
     def save_settings(self):
-
-        self.sets.save_settings()
+        return None
+        # TODO settings.save_settings()
 
     # To restore the settings we have to use a class method, since we might want to use it as a startup.
     # This is why there is an argument (42) in the class reference, rather than an empty parenthesis.
     #
     def restore_settings(self):
-
-        self.sets.restore_settings()
+        return None
+        # TODO settings.restore_settings()
         #
         # TODO: add code, so that the restored settings will be added back to the window on start.
         #
@@ -544,17 +552,16 @@ class UserGUI(object):
     def handle_sample(sample):
         print(sample.channel_data)
 
-
 # ==========================
 # Initialising the class
 #
-eeg = UserGUI()
+cfg.eeg = UserGUI()
 
 
 # ==========================
 # Starting the application
 #
-eeg.start()
+cfg.eeg.start()
 
 # ==========================
 # END of FILE
