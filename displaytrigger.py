@@ -143,11 +143,16 @@ class StudyGui(object):
             cfg.eeg.start_streaming()         # Before we start, we start the streaming of data.
             showImage(counter, event = None)
 
+
         def showImage(counter, event = None):
             """
             This is the main function administrating the images and pauses.
             Interaction with the plugin is mostly done by semaphore variables in the config module.
             """
+
+            if not cfg.study_running:
+                return
+
             cfg.image_number = counter
 
             if self.order_var.get() == 0:                     # Show the images in the given order.
