@@ -8,6 +8,9 @@ import config as cfg
 
 #from yapsy.PluginManager import PluginManager
 
+##############################
+# Constant definitions
+#
 TIME = [
     3,
     5,
@@ -27,52 +30,55 @@ class StudyGui(object):
 
     def __init__(self):
 
-        cfg.study_running = False
-        cfg.image_shown = False
-        cfg.new_image = False
+        # Semaphores
+        #
+        cfg.study_running = False       # Indicates ongoing study
+        cfg.image_shown = False         # Indicates whether an image is currently shown or not
+        cfg.new_image = False           # Indicates whether a new image has been loaded or not
 
+        # Will keep a list with all images in a random order.
+        #
         self.ran_list = ()
         self.image_dict = {}
 
-        # Create window instance
+        # Create window instance, under the main window (since it is a plugin window).
         #
-        self.win = Tk()
-        self.win.title('EEG Study')
-        self.counter = 0
+        self.study_window = Toplevel(cfg.main_window)
+        self.study_window.title('EEG Study')
+        self.img_counter = 0
 
-        # Open the image used for the pause between images
+        # Open the image used for the pause between images (normally a black screen)
         #
         self.im = glob.glob('./Images/Pause/*')
         self.black_screen = ImageTk.PhotoImage(Image.open(self.im[0]))
 
         # Create the containers to hold widgets
-
-        # Startbutton container
         #
-        self.buttonFrame = ttk.Frame(self.win)
+        # Start button container
+        #
+        self.buttonFrame = ttk.Frame(self.study_window)
         self.buttonFrame.grid(column=2, row=2, padx=20, pady=5, sticky='S')
 
         # Plugin selection
         #
-        self.labelsFrame1 = LabelFrame(self.win, background='white', text='Settings:')
+        self.labelsFrame1 = LabelFrame(self.study_window, background='white', text='Settings:')
         self.labelsFrame1.grid(column=0, row=0, padx=20, pady=5, sticky='N')
 
         # Port selection
         #
-        self.labelsFrame2 = ttk.LabelFrame(self.win, text='')
+        self.labelsFrame2 = ttk.LabelFrame(self.study_window, text='')
         self.labelsFrame2.grid(column=0, row=1, padx=20, pady=5, sticky="WE")
 
         # Board type selection
         #
-        self.labelsFrame3 = ttk.LabelFrame(self.win, text='')
+        self.labelsFrame3 = ttk.LabelFrame(self.study_window, text='')
         self.labelsFrame3.grid(column=1, row=0, padx=20, pady=5, sticky='N')
 
         # ==========================
         # Adding menus
         # ==========================
         #
-        # Creating a Menu Bar
-        #
+        cfg.plugin_menu.add_command(label="Start Experiment", command=self.studyStart)
         cfg.plugin_menu.add_command(label="Reset Experiment", command=self.reset)
 
         # =====================
@@ -80,14 +86,14 @@ class StudyGui(object):
         # =====================
         # Dropdown menu for image selection
         #
-        self.image_var = StringVar(self.win)
+        self.image_var = StringVar(self.study_window)
         self.image_var.set(IMAGES[0])            # Default value
-        self.sel_images = OptionMenu(self.labelsFrame1, self.image_var, *IMAGES).grid(row=0,column=1, sticky=W)
+        self.sel_images = OptionMenu(self.labelsFrame1, self.image_var, *IMAGES).grid(row=0, column=1, sticky=W)
         self.label_sel_img = Label(self.labelsFrame1, text="Select Images:").grid(column=0, row=0, sticky=W)
 
         # Dropdown menu for time selection
         #
-        self.time_var = IntVar(self.win)
+        self.time_var = IntVar(self.study_window)
         self.time_var.set(TIME[0])               # Default value
         self.sel_time = OptionMenu(self.labelsFrame1, self.time_var, *TIME).grid(row=1, column=1, sticky=W)
         self.label_sel_time = Label(self.labelsFrame1, text="Select Time:", justify=LEFT).grid(row=1, column=0, sticky=W)
@@ -105,21 +111,19 @@ class StudyGui(object):
         self.pause_button = Checkbutton(self.labelsFrame1, text='Use black screen between images', variable=self.pause_var, pady=10)
         self.pause_button.grid(row=5,column=0, sticky=E)
 
-        #Add startbutton
+        # Add startbutton
         #
         self.start_button = Button(self.buttonFrame, text='Start Study', padx=10, command=self.studyStart).grid(row=0, column=1)
 
-        #Add quit study button
+        # Add quit study button
         #
         self.quit_button = Button(self.buttonFrame, text='Quit Study', padx=10, command=lambda: self.study_screen.destroy()).grid(row=0, column=0)
 
-
     def start(self):
-        self.win.mainloop()
-
+        self.study_window.mainloop()
 
     def reset(self):
-        self.win.quit()
+        self.study_window.quit()
 
     # Responsible for the connection between plugin and this program
     #
@@ -132,48 +136,44 @@ class StudyGui(object):
     def betweenImage(self):
         self.study = False
 
-
     # ====================================
     # Create a fullscreen Toplevel window
     # ====================================
     #
     def studyStart(self):
 
-        def removeInstr(event=None):
+        def remove_instr(event=None):
             self.study_instructions.pack_forget()
 
-        def startStudy(counter):
+        def start_study():
             cfg.eeg.start_streaming()         # Before we start, we start the streaming of data.
-            showImage(counter, event = None)
+            show_image(event=None)
 
-
-        def showImage(counter, event = None):
+        def show_image(event=None):
             """
             This is the main function administrating the images and pauses.
             Interaction with the plugin is mostly done by semaphore variables in the config module.
             """
+            # if not cfg.study_running:
+            #     return
 
-            if not cfg.study_running:
-                return
-
-            cfg.image_number = counter
+            # cfg.image_number = im_counter
 
             if self.order_var.get() == 0:                     # Show the images in the given order.
-                if counter < len(self.image_dict):
-                        self.im = self.image_dict[str(counter*10)]
+                if cfg.image_number < len(self.image_dict):
+                        self.im = self.image_dict[str(cfg.image_number * 10)]
                         self.image_label.configure(image=self.im)
-                        cfg.image_shown = True                    # This will be set to false if the background is black inbetween
-                        cfg.new_image = True                      # This will be reset by the first call
-                        counter += 1
-                        self.study_screen.after(self.time_var.get()*1000, showBlack, counter)
+                        cfg.image_shown = True                # This will be set to false for black background inbetween
+                        cfg.new_image = True                  # This will be reset by the first call
+                        cfg.image_number += 1
+                        self.study_screen.after(self.time_var.get() * 1000, showBlack, cfg.image_number)
 
             else:                                             # Use the randomised list
-                if counter < len(self.image_dict):
-                    self.im = self.image_dict[self.ran_list[counter]]
+                if cfg.image_number < len(self.image_dict):
+                    self.im = self.image_dict[self.ran_list[cfg.image_number]]
                     self.image_label.configure(image=self.im)
-                    #self.caller.trigger(counter)
-                    counter += 1
-                    self.study_screen.after(self.time_var.get()*1000, showBlack, counter)
+                    cfg.image_number += 1
+                    self.study_screen.after(self.time_var.get() * 1000, showBlack, cfg.image_number)
 
 
         def randomize(self):
@@ -187,19 +187,19 @@ class StudyGui(object):
                 self.image_label.configure(image=self.black_screen)
                 if counter >= len(self.image_dict):
                     counter = 0
-                self.study_screen.after(3000, showImage, counter)
+                self.study_screen.after(3000, show_image, counter)
             else:
                 if counter >= len(self.image_dict):
                     counter = 0
-                showImage(counter)
+                show_image(counter)
 
         def openImages(self):
-
             self.image_dir = glob.glob('./Images/%s/*' % self.image_var.get())
             for i in range(len(self.image_dir)):
                 x = ImageTk.PhotoImage(Image.open(self.image_dir[i]))
                 self.image_dict[str(i*10)] = x
             return self.image_dict
+
         def destroyWindow():
             self.study_screen.destroy()
 
@@ -218,6 +218,8 @@ class StudyGui(object):
                             ' a black screen in between.\n\r Please simply focus on the screen.\n\r\n\r ' \
                             'Press Enter to start the study.'
 
+        # TODO externalise string
+
         # Write the study instructions
         #
         self.study_instructions = Label(self.study_screen, text=self.instr_txt)
@@ -226,16 +228,17 @@ class StudyGui(object):
         self.image_label = Label(self.study_screen)
         self.image_label.pack()
 
-        #Open the images and put into a list
+        # Open the images and put into a list
         #
         self.image_dict = openImages(self)
 
-        #Create a list of the random indexes that will be used in showImage
+        # Create a list of the random indexes that will be used in show_image
+        #
         self.ran_list = randomize(self)
 
         # Remove the Label and start the study when Return is pressed
         #
-        self.study_screen.bind('<Return>', removeInstr, startStudy(self.counter))
+        self.study_screen.bind('<Return>', remove_instr, start_study())
 
         #
         self.study_screen.bind("<Escape>", lambda e: destroyWindow())

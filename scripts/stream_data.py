@@ -23,14 +23,14 @@ DEBUG = False
 # check packet drop
 last_id = -1
 
-# counter for sampling rate
+# img_counter for sampling rate
 nb_samples_in = -1
 nb_samples_out = -1
 
 # last seen values for interpolation
 last_values = [0] * NB_CHANNELS
 
-# counter to trigger duplications...
+# img_counter to trigger duplications...
 leftover_duplications = 0
 
 tick=timeit.default_timer()

@@ -747,7 +747,7 @@ class OpenBCIBoard(object):
         # Finds the serial port names. The port addresses are different on different
         # platforms.
         #
-        if sys.platform.startswith('win'):
+        if sys.platform.startswith('study_window'):
             self.gui.log_mess(dict.get_string(self, 'checkwin'))
             ports = ['COM%s' % (i + 1) for i in range(256)]
         elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):

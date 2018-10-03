@@ -322,7 +322,7 @@ class UserGUI(object):
         #
         # Loop counters can still be needed.
         #
-        i = 0  # Initiating the loop counter
+        i = 0  # Initiating the loop img_counter
         newVar = ''
         #
         # Go through all the plugins and render them into a list of items which can be used to

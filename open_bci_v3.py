@@ -83,7 +83,7 @@ class OpenBCIBoard(object):
 
 
     def __init__(self,
-                 # win,
+                 # study_window,
                  port="/dev/tty.usbserial-DQ007PE8",
                  baud=115200,
                  filter_data=True,
@@ -96,7 +96,7 @@ class OpenBCIBoard(object):
 
         # We need to be able to address functions in the interface.
         #
-        # self.window=win,
+        # self.window=study_window,
 
         # print_incoming_text needs log
         #
@@ -116,11 +116,11 @@ class OpenBCIBoard(object):
         # might be handy to know API
         self.board_type = "cyton"
 
-        # win.log_mess(self.dic.get_string('v3connect', 1) % (port))
+        # study_window.log_mess(self.dic.get_string('v3connect', 1) % (port))
 
         self.ser = serial.Serial(port=port, baudrate=baud, timeout=timeout)
 
-        # win.log_mess(self.dic.get_string('estserial', 1))
+        # study_window.log_mess(self.dic.get_string('estserial', 1))
 
         time.sleep(2)
         # Initialize 32-bit board, doesn't affect 8bit board
@@ -644,7 +644,7 @@ class OpenBCIBoard(object):
     def find_port(self):
         # Finds the serial port names
         #
-        if sys.platform.startswith('win'):
+        if sys.platform.startswith('study_window'):
             ports = ['COM%s' % (i + 1) for i in range(256)]
         elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
             ports = glob.glob('/dev/ttyUSB*')

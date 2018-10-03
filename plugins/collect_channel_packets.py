@@ -136,7 +136,7 @@ def __init__(self, file_name="chanpackets", delim=",", verbose=True):
     #
     self.pack_size = 16
 
-    # We need to have a counter for the number of packets.
+    # We need to have a img_counter for the number of packets.
     #
     self.no_of_packets = 0
 
@@ -249,7 +249,7 @@ def __call__(self, sample):
     #
     # END of row =========================
 
-    # Update packets per batch counter.
+    # Update packets per batch img_counter.
     #
     self.no_of_packets += 1
 
@@ -325,7 +325,7 @@ def __call__(self, sample):
     #     #
     #     # END of row =========================
     #
-    #     # Update packets per batch counter.
+    #     # Update packets per batch img_counter.
     #     #
     #     self.no_of_packets += 1
     #
@@ -366,4 +366,4 @@ def open_control_window(self):
     self.dLabel = ttk.Label(self.panel, text=str(self.pack_size))
     self.dLabel.grid(column=1, row=1, sticky="WE")
 
-    # self.win.mainloop()
+    # self.study_window.mainloop()

@@ -217,7 +217,7 @@ class PluginChanCollect(plugintypes.IPluginExtended):
         #
         # END of row =========================
 
-        # Update packets per batch counter.
+        # Update packets per batch img_counter.
         #
         self.no_of_packets += 1
 
@@ -294,7 +294,7 @@ class PluginChanCollect(plugintypes.IPluginExtended):
     #     #
     #     # END of row =========================
     #
-    #     # Update packets per batch counter.
+    #     # Update packets per batch img_counter.
     #     #
     #     self.no_of_packets += 1
     #
@@ -335,4 +335,4 @@ class PluginChanCollect(plugintypes.IPluginExtended):
         self.dLabel = ttk.Label(self.panel, text=str(self.pack_size))
         self.dLabel.grid(column=1, row=1, sticky="WE")
 
-        # self.win.mainloop()
+        # self.study_window.mainloop()

@@ -114,21 +114,21 @@ class RawOpenBCI(_BaseRaw):
         When recording with OpenBCI over Bluetooth, it is possible for some of
         the data packets, samples, to not be recorded. This does not happen
         often but it poses a problem for maintaining proper sampling periods.
-        OpenBCI data format combats this by providing a counter on the sample
+        OpenBCI data format combats this by providing a img_counter on the sample
         to know which ones are missing.
 
         Solution
         --------
         Interpolate the missing samples by resampling the surrounding samples.
         1. Find where the missing samples are.
-        2. Deal with the counter reset (resets after cycling a byte).
+        2. Deal with the img_counter reset (resets after cycling a byte).
         3. Resample given the diffs.
         4. Insert resampled data in the array using the diff indices
            (index + 1).
         5. If number of missing samples is greater than the missing_tol, Values
            are replaced with np.nan.
         """
-        # counter goes from 0 to 255, maxdiff is 255.
+        # img_counter goes from 0 to 255, maxdiff is 255.
         # make diff one like others.
         missing_tol = self._raw_extras[fi]['missing_tol']
         diff = np.abs(np.diff(data_[:, 0]))
@@ -159,7 +159,7 @@ class RawOpenBCI(_BaseRaw):
 
     def _get_data_dims(self, input_fname):
         """Briefly scan the data file for info"""
-        # raw data formatting is nsamps by nchans + counter
+        # raw data formatting is nsamps by nchans + img_counter
         data = np.genfromtxt(input_fname, delimiter=',', comments='%',
                              skip_footer=1)
         diff = np.abs(np.diff(data[:, 0]))

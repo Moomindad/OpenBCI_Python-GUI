@@ -4,7 +4,7 @@ from threading import Thread
 
 import plugin_interface as plugintypes
 
-# counter for sampling rate
+# img_counter for sampling rate
 nb_samples_out = -1
 
 # try to ease work for main loop

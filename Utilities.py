@@ -6,6 +6,7 @@ Created on Jul 4, 2015
 @author: Burkhard
 '''
 import subprocess
+import sys
 # ======================
 # imports
 # ======================
@@ -13,6 +14,8 @@ import tkinter as tk
 
 debugging = True
 
+# Adding tooltips to the various buttons and controls.
+#
 class ToolTip(object):
     def __init__(self, widget):
         self.widget = widget
@@ -65,13 +68,19 @@ def createToolTip(widget, text):
 # ===================================================================
 # Function to gather the available Bluetooth devices.
 # ===================================================================
+# Since the com ports are different on OSX and windows we need to make two
+# different port definitions.
 #
 def getBluetToothDevices():
-    #p = subprocess.Popen("ls /dev/tty.*", stdout=subprocess.PIPE, shell=True)
-    #(output, err) = p.communicate()
-    output = ["COM3"]
-    return output
+    if sys.platform == 'darwin':                # OS X
+        p = subprocess.Popen("ls /dev/tty.*", stdout=subprocess.PIPE, shell=True)
+        (output, err) = p.communicate()
+    else:
+        if 'study_window' in sys.platform:             # Windows.
+            output = ["COM3"]
+            # TODO TOM check that this works for windows 64
 
+    return output
 
 
 def mybug(textlist):

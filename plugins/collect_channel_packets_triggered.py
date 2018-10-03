@@ -37,12 +37,12 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
         self.activated = False
 
-        self.trigger = trig.StudyGui()
+        self.trigger = None        # This variable will be instantiated to the studyGUI object when activated.
 
-        # The triggerval variable keeps track of which of the phases we are in.
+        # The trigger_value variable keeps track of which of the phases we are in.
         # Always start with the triggerval set to black = 0
         #
-        self.trigval = 0
+        self.trigger_value = 0
 
         # Set current time at the initialisation
         #
@@ -76,7 +76,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
         # Collecting real variables as well.
         #
-        self.data_arr_np = []
+        self.data_arr_np = np.array([])
 
         # We use a temporary variable to collect the packages
         #
@@ -86,13 +86,13 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
         self.break_time = 0.3
 
-        # The packet size is normally set to 16, since we are using 16 channels. Should we use just 8 channels,
-        # (the Cyton board only) we need to set this number to 8 as well. The packets should be of the size x * x in order for
-        # certain neural network methods to work.
+        # The packet size is normally set to 16, since we are using 16 channels (Cyton + Daisy). Should we use just 8
+        # channels, (the Cyton board only) we need to set this number to 8 as well. The packets should be of the
+        # size x * x in order for certain neural network methods to work.
         #
         self.pack_size = cfg.sensornumber - 1
 
-        # We need to have a counter for the number of packets we have collected in the current sequence
+        # We need to have a img_counter for the number of packets we have collected in the current sequence
         #
         self.no_of_packets = 0
 
@@ -100,6 +100,10 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     # This is called when the plugin is activated.
     #
     def activate(self):
+
+        # Create the studyGUI object here. If done in init() it will create three parallell instances.
+        #
+        self.trigger = trig.StudyGui()
 
         # To avoid multiple activations causing multiple windows and menus.
         #
@@ -119,16 +123,12 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
             print("Will export data to:" + self.data_file_name)
 
-            # self.data_arr_np = np.array([])
-
-               # level 1 square bracket. This is encapsulating the whole data pack.
-
             # Create separate control window, in a separate thread.
             #
             win_thread = threading.Thread(target=self.open_control_window)
             win_thread.start()
 
-            self.trigger.studyStart()
+            # self.trigger.studyStart()
 
             # Open the file in append mode
             #
@@ -173,6 +173,8 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     #
     def __call__(self, sample):
 
+        # TODO this has to be implemented properly.
+        #
         # if not cfg.study_running:  # If we do not run the study, we just return from the call.
         #     return
         #
@@ -180,12 +182,12 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         # background data type).
         #
         if not cfg.image_shown:
-            self.trigval = 0
+            self.trigger_value = 0
 
         # If we start with a new image, the trigvalue is reset to one, and then the new_image flag is reset to False
         #
         if cfg.new_image:
-            self.trigval = 1
+            self.trigger_value = 1
             cfg.new_image = False
 
         # Calculate the time passed since start.
@@ -242,7 +244,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         #
         # END of row =========================
 
-        # Update packets per batch counter.
+        # Update packets per batch img_counter.
         #
         self.no_of_packets += 1
 
@@ -267,7 +269,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
             #
             # Append the current chunk to the array, and then append the trigvalue string to it.
             #
-            self.arr_collector.append(self.data_arr_np.append(self.trigval))
+            self.arr_collector.append(self.data_arr_np.append(self.trigger_value))
             self.data_arr = self.data_arr[:-2] + '],\n'
 
             # Write the package content to the file.
@@ -278,14 +280,14 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
             # Write the corresponding trigger value
             #
             with open(self.result_file_name, 'a') as f:
-                f.write(cfg.triggervalstr[self.trigval] + '\n')
+                f.write(cfg.triggervalstr[self.trigger_value] + '\n')
 
             # Level 3 and 2
             #
             # We just separate the eight first samples in each bunch into separate patterns
             #
-            if self.trigval < 8:
-                self.trigval += 1
+            if self.trigger_value < 8:
+                self.trigger_value += 1
 
             # If we start on a new package, we need to have a new first row.
             #
@@ -338,7 +340,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     #     #
     #     # END of row =========================
     #
-    #     # Update packets per batch counter.
+    #     # Update packets per batch img_counter.
     #     #
     #     self.no_of_packets += 1
     #
@@ -380,4 +382,4 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         self.dLabel = ttk.Label(self.panel, text=str(self.pack_size))
         self.dLabel.grid(column=1, row=1, sticky="WE")
 
-        # self.win.mainloop()
+        # self.study_window.mainloop()
