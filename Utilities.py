@@ -67,8 +67,9 @@ def createToolTip(widget, text):
 # ===================================================================
 #
 def getBluetToothDevices():
-    p = subprocess.Popen("ls /dev/tty.*", stdout=subprocess.PIPE, shell=True)
-    (output, err) = p.communicate()
+    #p = subprocess.Popen("ls /dev/tty.*", stdout=subprocess.PIPE, shell=True)
+    #(output, err) = p.communicate()
+    output = ["COM3"]
     return output
 
 

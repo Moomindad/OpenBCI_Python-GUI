@@ -31,6 +31,9 @@ class StudyGui(object):
         cfg.image_shown = False
         cfg.new_image = False
 
+        self.ran_list = ()
+        self.image_dict = {}
+
         # Create window instance
         #
         self.win = Tk()
@@ -151,42 +154,49 @@ class StudyGui(object):
             cfg.image_number = counter
 
             if self.order_var.get() == 0:                     # Show the images in the given order.
-                if counter < len(self.image_list):
-                    self.im = self.image_list[counter]
-                    self.image_label.configure(image=self.im)
-                    cfg.image_shown = True                    # This will be set to false if the background is black inbetween
-                    cfg.new_image = True                      # This will be reset by the first call
-                    counter += 1
-                    self.study_screen.after(self.time_var.get()*1000, showBlack, counter)
+                if counter < len(self.image_dict):
+                        self.im = self.image_dict[str(counter*10)]
+                        self.image_label.configure(image=self.im)
+                        cfg.image_shown = True                    # This will be set to false if the background is black inbetween
+                        cfg.new_image = True                      # This will be reset by the first call
+                        counter += 1
+                        self.study_screen.after(self.time_var.get()*1000, showBlack, counter)
 
             else:                                             # Use the randomised list
-                if counter < len(self.image_list):
-                    self.im = self.image_list[self.ran_list[counter]]
+                if counter < len(self.image_dict):
+                    self.im = self.image_dict[self.ran_list[counter]]
                     self.image_label.configure(image=self.im)
                     #self.caller.trigger(counter)
                     counter += 1
                     self.study_screen.after(self.time_var.get()*1000, showBlack, counter)
 
+
         def randomize(self):
-            ran_list = list(range(len(self.image_dir)))
-            random.shuffle(ran_list)
-            return ran_list
+            key_list = list(self.image_dict.keys())
+            random.shuffle(key_list)
+            return key_list
 
         def showBlack(counter):
             if self.pause_var.get() == 1:
                 cfg.image_shown = False  # Pause the stream while background is shown.
                 self.image_label.configure(image=self.black_screen)
+                if counter >= len(self.image_dict):
+                    counter = 0
                 self.study_screen.after(3000, showImage, counter)
             else:
+                if counter >= len(self.image_dict):
+                    counter = 0
                 showImage(counter)
 
         def openImages(self):
-            img_list = []
+
             self.image_dir = glob.glob('./Images/%s/*' % self.image_var.get())
             for i in range(len(self.image_dir)):
                 x = ImageTk.PhotoImage(Image.open(self.image_dir[i]))
-                img_list.append(x)
-            return img_list
+                self.image_dict[str(i*10)] = x
+            return self.image_dict
+        def destroyWindow():
+            self.study_screen.destroy()
 
         self.study_screen = Toplevel(bg='black')
 
@@ -213,7 +223,7 @@ class StudyGui(object):
 
         #Open the images and put into a list
         #
-        self.image_list = openImages(self)
+        self.image_dict = openImages(self)
 
         #Create a list of the random indexes that will be used in showImage
         self.ran_list = randomize(self)
@@ -223,12 +233,12 @@ class StudyGui(object):
         self.study_screen.bind('<Return>', removeInstr, startStudy(self.counter))
 
         #
-        self.study_screen.bind("<Escape>", lambda e: e.widget.exit())
+        self.study_screen.bind("<Escape>", lambda e: destroyWindow())
 
 # These will only be used here in case the StudyGUI is run as a standalone application
 #
-# eeg = StudyGui()  # läggs i collect-plugin
+#eeg = StudyGui()  # läggs i collect-plugin
 #
 #
-# eeg.start()       # läggs i collect-plugin
+#eeg.start()       # läggs i collect-plugin
 
