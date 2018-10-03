@@ -76,7 +76,7 @@ def getBluetToothDevices():
         p = subprocess.Popen("ls /dev/tty.*", stdout=subprocess.PIPE, shell=True)
         (output, err) = p.communicate()
     else:
-        if 'study_window' in sys.platform:             # Windows.
+        if 'win' in sys.platform:             # Windows.
             output = ["COM3"]
             # TODO TOM check that this works for windows 64
 
