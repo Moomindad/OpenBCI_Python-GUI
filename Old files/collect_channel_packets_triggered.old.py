@@ -270,7 +270,7 @@ class PluginChanCollect(plugintypes.IPluginExtended):
     #
     #         # Initialise each subarray with the proper delimiters
     #         #
-    #         self.data_arr += '['
+    #         self.data_arr_string += '['
     #         self.first_row = False
     #
     #     # Each row is constructed separately. ========================
@@ -279,13 +279,13 @@ class PluginChanCollect(plugintypes.IPluginExtended):
     #
     #     if self.verbose:
     #         row += str(t)
-    #         row += self.delim
+    #         row += self.delimiter
     #         row += str(sample.id)
-    #         row += self.delim
+    #         row += self.delimiter
     #
     #     for i in sample.channel_data:
     #         row += str(i)
-    #         row += self.delim
+    #         row += self.delimiter
     #
     #     if self.verbose:
     #         row += "CSV: %f | %d" % (t, sample.id)
@@ -298,7 +298,7 @@ class PluginChanCollect(plugintypes.IPluginExtended):
     #     #
     #     self.no_of_packets += 1
     #
-    #     self.data_arr += row
+    #     self.data_arr_string += row
     #
     #     # Check if we have passed a chunk, depending on the set time limit.
     #     #
@@ -306,11 +306,11 @@ class PluginChanCollect(plugintypes.IPluginExtended):
     #     print(deltat)
     #
     #     if self.no_of_packets > self.pack_size:
-    #         self.data_arr = self.data_arr[:-2] +'],\n'
+    #         self.data_arr_string = self.data_arr_string[:-2] +'],\n'
     #         self.first_row = True
     #
     #         with open(self.data_file_name, 'a') as f:
-    #             f.write(self.data_arr)
+    #             f.write(self.data_arr_string)
     #
     #         self.bLabel['text'] = str(deltat)
 

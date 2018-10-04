@@ -29,18 +29,28 @@ from dictionary import Dictionary as dict
 class PluginChanCollectTrig(plugintypes.IPluginExtended):
     __main_instance__ = None
 
-    def __init__(self, file_name="chanpackets", delim=",", verbose=True):
+    def __init__(self, file_name="chanpackets", delimiter=",", verbose=True):
 
         # The y_value is used to store the current flag_value for the output categories in keras.
         #
         self.y_value = 0
 
+        # Semaphors
+        #
         self.activated = False
+        self.verbose = False
+        #
+        # The first row in each package has to be initiated in a special way.
+        #
+        self.first_row = True
 
-        self.trigger = None        # This variable will be instantiated to the studyGUI object when activated.
+        # This variable is declared as a place holder, which will be instantiated to the studyGUI
+        # object when activated.
+        #
+        self.trigger = None
 
         # The trigger_value variable keeps track of which of the phases we are in.
-        # Always start with the triggerval set to black = 0
+        # Always start with the trigger_value set to black = 0
         #
         self.trigger_value = 0
 
@@ -56,31 +66,34 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         #
         self.time_stamp = '%d-%d-%d_%d-%d-%d' % (now.year, now.month, now.day, now.hour, now.minute, now.second)
 
-        # We use two files to store the data (the sensor data) and the result (the trigger values).
+        # We use two separate files to store the numeric data (the sensor data) and the result (the trigger values).
         #
         self.data_file_name = file_name + "-data-" + self.time_stamp + ".csv"
         self.result_file_name = file_name + "-result-" + self.time_stamp + ".csv"
 
+        # We also store it as numpy arrays.
+        #
+        self.data_file_name_np = file_name + "-data-" + self.time_stamp + ".np"
+        self.result_file_name_np = file_name + "-result-" + self.time_stamp + ".np"
+
         # Store the starting time for the session
         #
         self.start_time = timeit.default_timer()
-        self.delim = delim
-
-        # The first row in each package has to be initiated in a special way.
-        #
-        self.first_row = True
+        self.delimiter = delimiter
 
         # This is for collecting the data from the openBCI session in string form.
         #
-        self.data_arr = ''
+        self.data_arr_string = ''
+        self.result_arr_string = ''
 
-        # Collecting real variables as well.
+        # Collecting real data variables as well.
         #
         self.data_arr_np = np.array([])
+        self.result_arr_np = np.array([])
 
         # We use a temporary variable to collect the packages
         #
-        self.arr_collector = []
+        self.arr_collector = np.array([])
 
         self.t2 = 0.0
 
@@ -143,21 +156,22 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         #
         # Adjust the last delimiting commas, and add proper array ends.
         #
-        self.data_arr = self.data_arr[:-2] + ']]\n'
+        self.data_arr_string = self.data_arr_string[:-2] + ']]\n'
 
         #
         # write last array, and then close the file. If written in TEXT format, the result is a string. Otherwise
         # it is saved in numpy format.
         #
         with open(self.data_file_name, 'a') as f:
-            f.write(self.data_arr)
+            f.write(self.data_arr_string)
             f.close()
 
         with open(self.result_file_name, 'a') as f:
-            f.write(self.data_arr)
+            f.write(self.result_arr_string)
             f.close()
 
-        np.save(self.data_file_name + "npy", np.asarray(self.arr_collector))
+        np.save(self.data_file_name + "npy", self.data_arr_np)
+        np.save(self.result_file_name + "npy", self.result_arr_np)
 
         print(dict.get_string('plugclose') + self.data_file_name)
         print(dict.get_string('checkarray'))
@@ -167,7 +181,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     def show_help(self):
         print("Optional argument: [filename] (default: collect.csv)")
 
-    #
+    # ======================================================
     # ======================================================
     # This is called from the openBCI-streamer. This part has to be as fast as possible.
     #
@@ -184,16 +198,18 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         if not cfg.image_shown:
             self.trigger_value = 0
 
-        # If we start with a new image, the trigvalue is reset to one, and then the new_image flag is reset to False
+        # If we start with a new image, the trigger value is reset to one, and then the new_image flag is reset to False
         #
         if cfg.new_image:
             self.trigger_value = 1
             cfg.new_image = False
 
-        # Calculate the time passed since start.
+        # Calculate the time passed since start. This is for adding the delta time if needed.
         #
         self.t = timeit.default_timer() - self.start_time
 
+        # =========================================================================
+        # FIRST ROW
         # print(timeSinceStart|Sample Id)
         # =========================================================================
         # For every first row in the array, we will perform some initialisations.
@@ -201,12 +217,10 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         if self.first_row:
             self.t2 = self.t
 
-            # print(self.t)
-
             # Initialise each subarray with the proper delimiters
             #
-            self.data_arr = '['  # First row has an extra '[' added to contain the pack. Level 2
-            self.data_arr_np = []
+            self.data_arr_string = '['  # First row has an extra '[' added to contain the pack. Level 2
+            self.data_arr_np = np.array([])
 
             self.first_row = False
 
@@ -226,38 +240,52 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         # ]1
         #
 
+        # =========================================================================
+        # EVERY ROW
+        # =========================================================================
+        #
         row = '['   # Level 4
-        int_row = []
 
+        # =========================================================================
+        # COLLECTING SAMPLE DATA
+        # =========================================================================
         # Checking the data and adding it into rows, both numeric and string-form in parallell.
         #
-        for i in sample.channel_data:
-            int_row.append(abs(i))  # TODO check the polarity.
-            row += str(abs(i))      # TODO likewise
-            row += self.delim       # Default delimiter is ','
-
-        # print("Row:")
-        # print(int_row)
-
-        row = row[:-1] + '],\n' # Level 4. The slicing is necessary to take away a superfluous ',' before the last ']'
-
+        # First the int data in a numpy array.
         #
-        # END of row =========================
+        self.int_row_np = np.array(sample.channel_data)  # TODO check the polarity. Is abs() necessary?
 
+        for i in sample.channel_data:
+            row += str(abs(i))      # TODO likewise
+            row += self.delimiter       # Default delimiter is ','
+
+        row = row[:-1] + '],\n'     # Level 4. The slicing is necessary to take away a superfluous ','
+                                    # before the last ']'
+        #
+        # =========================================================================
+        # END OF ROW COLLECTION
+        # =========================================================================
+        #
         # Update packets per batch img_counter.
         #
         self.no_of_packets += 1
 
         # Add the string version of the row.
         #
-        self.data_arr += row
+        self.data_arr_string += row
 
-        self.data_arr_np.append(int_row)
-
-        # Check if we have passed a chunk, depending on the set time limit.
+        # Add the np component to the collector array.
         #
+        self.arr_collector = np.vstack((self.arr_collector, self.int_row_np))
+
         delta_t = self.t - self.t2
 
+        # =========================================================================
+        # EACH CHUNK
+        # print(timeSinceStart|Sample Id)
+        # =========================================================================
+        # Check if we have passed a chunk, depending on the set time limit.
+        #
         # If the number of chunks in the packet is big enough, we pack the current string
         # into a subarray.
         #
@@ -267,17 +295,23 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
             # TODO check this when running
             #
-            # Append the current chunk to the array, and then append the trigvalue string to it.
+            # Append the current chunk to the array, and then append the trigger
+            # value to the result.
             #
-            self.arr_collector.append(self.data_arr_np.append(self.trigger_value))
-            self.data_arr = self.data_arr[:-2] + '],\n'
+            # First the numpy data
+            self.data_arr_np = np.vstack((self.data_arr_np, self.arr_collector))
+            self.result_arr_np = np.hstack((self.result_arr_np, np.array(self.trigger_value)))
 
-            # Write the package content to the file.
+            # Then the string data
+            #
+            self.data_arr_string = self.data_arr_string[:-2] + '],\n'
+
+            # Write the package content in string form to the file.
             #
             with open(self.data_file_name, 'a') as f:
-                f.write(self.data_arr)
+                f.write(self.data_arr_string)
 
-            # Write the corresponding trigger value
+            # Write the corresponding trigger value to the result file
             #
             with open(self.result_file_name, 'a') as f:
                 f.write(cfg.triggervalstr[self.trigger_value] + '\n')
@@ -316,7 +350,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     #
     #         # Initialise each subarray with the proper delimiters
     #         #
-    #         self.data_arr += '['
+    #         self.data_arr_string += '['
     #         self.first_row = False
     #
     #     # Each row is constructed separately. ========================
@@ -325,13 +359,13 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     #
     #     if self.verbose:
     #         row += str(t)
-    #         row += self.delim
+    #         row += self.delimiter
     #         row += str(sample.id)
-    #         row += self.delim
+    #         row += self.delimiter
     #
     #     for i in sample.channel_data:
     #         row += str(i)
-    #         row += self.delim
+    #         row += self.delimiter
     #
     #     if self.verbose:
     #         row += "CSV: %f | %d" % (t, sample.id)
@@ -344,7 +378,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     #     #
     #     self.no_of_packets += 1
     #
-    #     self.data_arr += row
+    #     self.data_arr_string += row
     #
     #     # Check if we have passed a chunk, depending on the set time limit.
     #     #
@@ -352,11 +386,11 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     #     print(deltat)
     #
     #     if self.no_of_packets > self.pack_size:
-    #         self.data_arr = self.data_arr[:-2] +'],\n'
+    #         self.data_arr_string = self.data_arr_string[:-2] +'],\n'
     #         self.first_row = True
     #
     #         with open(self.data_file_name, 'a') as f:
-    #             f.write(self.data_arr)
+    #             f.write(self.data_arr_string)
     #
     #         self.bLabel['text'] = str(deltat)
 
@@ -365,6 +399,8 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     #
 
     #
+
+
     def open_control_window(self):
 
         # ========================
@@ -382,4 +418,4 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         self.dLabel = ttk.Label(self.panel, text=str(self.pack_size))
         self.dLabel.grid(column=1, row=1, sticky="WE")
 
-        # self.study_window.mainloop()
+# END OF FILE
