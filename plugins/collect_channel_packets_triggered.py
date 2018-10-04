@@ -276,7 +276,10 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
         # Add the np component to the collector array.
         #
-        self.arr_collector = np.vstack((self.arr_collector, self.int_row_np))
+        if np.size(self.arr_collector) == 0:
+            self.arr_collector = np.hstack((self.arr_collector, self.int_row_np))
+        else:
+            self.arr_collector = np.vstack((self.arr_collector, self.int_row_np))
 
         delta_t = self.t - self.t2
 
@@ -299,7 +302,12 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
             # value to the result.
             #
             # First the numpy data
-            self.data_arr_np = np.vstack((self.data_arr_np, self.arr_collector))
+            #
+            if np.size(self.data_arr_np) == 0:
+                self.data_arr_np = np.hstack((self.data_arr_np, self.arr_collector))
+            else:
+                self.data_arr_np = np.vstack((self.data_arr_np, self.arr_collector))
+
             self.result_arr_np = np.hstack((self.result_arr_np, np.array(self.trigger_value)))
 
             # Then the string data
