@@ -253,6 +253,9 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         #
         # First the int data in a numpy array.
         #
+        
+        print("Time: " + self.t2 + sample.channel_data[0])
+
         self.int_row_np = np.array(sample.channel_data)  # TODO check the polarity. Is abs() necessary?
 
         for i in sample.channel_data:
