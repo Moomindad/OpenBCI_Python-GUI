@@ -193,9 +193,9 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     #
     def __call__(self, sample):
 
-        if sample.channel_data == '':
-            self.deactivate()
-            exit()
+        # if sample.channel_data == '':
+        #     self.deactivate()
+        #     exit()
 
         # TODO this has to be implemented properly.
         #
