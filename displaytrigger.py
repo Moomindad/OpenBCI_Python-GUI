@@ -149,6 +149,10 @@ class StudyGui(object):
             cfg.eeg.start_streaming()         # Before we start, we start the streaming of data.
             show_image(event=None)
 
+        def stop_study():
+            self.study_window.destroy()
+            cfg.plugin_instance.deactivate()
+
         def show_image(event=None):
             """
             This is the main function administrating the images and pauses.
@@ -241,7 +245,7 @@ class StudyGui(object):
         self.study_screen.bind('<Return>', remove_instr, start_study())
 
         #
-        self.study_screen.bind("<Escape>", lambda e: destroyWindow())
+        self.study_screen.bind("<Escape>", lambda e: stop_study())
 
 # These will only be used here in case the StudyGUI is run as a standalone application
 #

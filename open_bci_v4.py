@@ -43,6 +43,8 @@ import config as cfg
 import numpy as np
 import serial
 
+import sample_reader as sr
+
 # Importing two static objects.
 #
 from dictionary import Dictionary as dict
@@ -240,6 +242,8 @@ class OpenBCIBoard(object):
         streamthread.start()
 
     def start_streaming(self, callback, lapse=-1):
+
+
         """
         Start handling streaming data from the board. Call a provided callback
         for every single sample that is processed (every two samples with daisy module).
@@ -272,10 +276,17 @@ class OpenBCIBoard(object):
         This while-loop in the class has not been touched between v3 and v4 apart 
         from correcting pure errors.
         """
+
+        # reader = sr.SampleReader()
+
         while self.streaming:
 
             # read current sample
             #
+            # TODO RESTORE THIS AFTER TESTING
+
+            # sample = OpenBCISample(-1, reader.next(), [])
+
             sample = self._read_serial_binary()
 
             #
@@ -286,7 +297,7 @@ class OpenBCIBoard(object):
                 #
                 # Odd sample: daisy sample, save for later (tilde is the invert operator)
                 #
-                if ~    sample.id % 2:
+                if ~ sample.id % 2:
                     self.last_odd_sample = sample
                 #
                 # Even sample: concatenate and send if last sample was the first part, otherwise drop

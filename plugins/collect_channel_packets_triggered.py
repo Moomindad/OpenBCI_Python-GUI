@@ -31,6 +31,11 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
     def __init__(self, file_name="chanpackets", delimiter=",", verbose=True):
 
+        # Registering this instance in the config file.
+        #
+        cfg.plugin_instance = self
+
+
         # The y_value is used to store the current flag_value for the output categories in keras.
         #
         self.y_value = 0
@@ -73,8 +78,8 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
         # We also store it as numpy arrays.
         #
-        self.data_file_name_np = file_name + "-data-" + self.time_stamp + ".np"
-        self.result_file_name_np = file_name + "-result-" + self.time_stamp + ".np"
+        self.data_file_name_np = file_name + "-data-" + self.time_stamp
+        self.result_file_name_np = file_name + "-result-" + self.time_stamp
 
         # Store the starting time for the session
         #
@@ -88,12 +93,12 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
         # Collecting real data variables as well.
         #
-        self.data_arr_np = np.array([])
-        self.result_arr_np = np.array([])
+        self.data_arr_np = np.array([], int)
+        self.result_arr_np = np.array([], int)
 
         # We use a temporary variable to collect the packages
         #
-        self.arr_collector = np.array([])
+        self.arr_collector = np.array([], int)
 
         self.t2 = 0.0
 
@@ -108,6 +113,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         # We need to have a img_counter for the number of packets we have collected in the current sequence
         #
         self.no_of_packets = 0
+        self.total_number_of_packets = 0
 
     # ==================================================
     # This is called when the plugin is activated.
@@ -170,8 +176,8 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
             f.write(self.result_arr_string)
             f.close()
 
-        np.save(self.data_file_name + "npy", self.data_arr_np)
-        np.save(self.result_file_name + "npy", self.result_arr_np)
+        np.save(self.data_file_name_np, self.data_arr_np)
+        np.save(self.result_file_name_np, self.result_arr_np)
 
         print(dict.get_string('plugclose') + self.data_file_name)
         print(dict.get_string('checkarray'))
@@ -186,6 +192,10 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     # This is called from the openBCI-streamer. This part has to be as fast as possible.
     #
     def __call__(self, sample):
+
+        if sample.channel_data == '':
+            self.deactivate()
+            exit()
 
         # TODO this has to be implemented properly.
         #
@@ -220,7 +230,8 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
             # Initialise each subarray with the proper delimiters
             #
             self.data_arr_string = '['  # First row has an extra '[' added to contain the pack. Level 2
-            self.data_arr_np = np.array([])
+
+            # self.data_arr_np = np.array([])
 
             self.first_row = False
 
@@ -253,13 +264,10 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         #
         # First the int data in a numpy array.
         #
-        
-        print("Time: " + self.t2 + sample.channel_data[0])
-
         self.int_row_np = np.array(sample.channel_data)  # TODO check the polarity. Is abs() necessary?
 
         for i in sample.channel_data:
-            row += str(abs(i))      # TODO likewise
+            row += str(abs(i))          # TODO likewise
             row += self.delimiter       # Default delimiter is ','
 
         row = row[:-1] + '],\n'     # Level 4. The slicing is necessary to take away a superfluous ','
@@ -299,6 +307,10 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         #
         if self.no_of_packets > self.pack_size:
 
+            self.total_number_of_packets = self.total_number_of_packets +1
+            print(self.total_number_of_packets)
+
+
             # TODO check this when running
             #
             # Append the current chunk to the array, and then append the trigger
@@ -307,7 +319,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
             # First the numpy data
             #
             if np.size(self.data_arr_np) == 0:
-                self.data_arr_np = np.hstack((self.data_arr_np, self.arr_collector))
+                self.data_arr_np = np.array(self.arr_collector)
             else:
                 self.data_arr_np = np.vstack((self.data_arr_np, self.arr_collector))
 
@@ -417,16 +429,16 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         # ========================
         # Create Information space in the main window.
         #
-        self.aLabel = ttk.Label(self.panel, text=dict.get_string('packtime'))
+        self.aLabel = ttk.Label(self.panel, text=dict.get_string('packno'))
         self.aLabel.grid(column=0, row=0, sticky="WE")
 
-        self.bLabel = ttk.Label(self.panel, text=str(self.break_time * 1000))
+        self.bLabel = ttk.Label(self.panel, text=str(self.total_number_of_packets))
         self.bLabel.grid(column=1, row=0, sticky="WE")
 
         self.cLabel = ttk.Label(self.panel, text=dict.get_string('packets'))
         self.cLabel.grid(column=0, row=1, sticky="WE")
 
-        self.dLabel = ttk.Label(self.panel, text=str(self.pack_size))
+        self.dLabel = ttk.Label(self.panel, text=str(self.pack_size + 1))
         self.dLabel.grid(column=1, row=1, sticky="WE")
 
 # END OF FILE

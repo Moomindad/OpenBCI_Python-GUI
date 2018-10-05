@@ -56,6 +56,9 @@ current_board = None
 # ===================
 # SEMAPHORE VARIABLES
 #
+
+plugin_instance = None
+
 study_running = False
 image_shown = False
 image_type = None
