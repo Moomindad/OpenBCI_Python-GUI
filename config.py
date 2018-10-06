@@ -21,7 +21,7 @@ filteringEnabled = True
 logging = False
 baudrate = 115200
 
-debug = True
+debug = False
 
 # Impedance and auxiliaries are not used currently.
 #
