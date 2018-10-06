@@ -165,7 +165,7 @@ class OpenBCIBoard(object):
 
         # Initially the streaming of data is disabled.
         #
-        self.streaming = False
+        cfg.streaming = False
 
         # Setting all default values.
         #
@@ -241,9 +241,10 @@ class OpenBCIBoard(object):
         streamthread = threading.Thread(target=self.start_streaming, args=(callbacks, ))
         streamthread.start()
 
+    def stop_streaming(self):
+        cfg.streaming = False
+
     def start_streaming(self, callback, lapse=-1):
-
-
         """
         Start handling streaming data from the board. Call a provided callback
         for every single sample that is processed (every two samples with daisy module).
@@ -256,9 +257,9 @@ class OpenBCIBoard(object):
 
           lapse: TODO: needs to be described
         """
-        if not self.streaming:
+        if not cfg.streaming:
             self.ser.write(b'b')
-            self.streaming = True
+            cfg.streaming = True
             print("Streaming started")
 
         start_time = timeit.default_timer()
@@ -277,17 +278,20 @@ class OpenBCIBoard(object):
         from correcting pure errors.
         """
 
-        # reader = sr.SampleReader()
+        if cfg.debug:
+            reader = sr.SampleReader()
 
-        while self.streaming:
+        while cfg.streaming:
 
             # read current sample
             #
             # TODO RESTORE THIS AFTER TESTING
 
-            # sample = OpenBCISample(-1, reader.next(), [])
-
-            sample = self._read_serial_binary()
+            if cfg.debug:
+                sample = OpenBCISample(-1, reader.next(), [])
+                time.sleep(0.01)
+            else:
+                sample = self._read_serial_binary()
 
             #
             # If a daisy module is attached, wait to concatenate two samples (main board + daisy)
@@ -458,14 +462,14 @@ class OpenBCIBoard(object):
     def stop(self):
 
         print("Stopping streaming...\nWait for buffer to flush...")
-        self.streaming = False
+        cfg.streaming = False
         self.ser.write(b's')
         self.ctrl.clean_up()
         if cfg.logging:
             logging.warning('sent <s>: stopped streaming')
 
     def disconnect(self):
-        if (self.streaming == True):
+        if cfg.streaming:
             self.stop()
         if (self.ser.isOpen()):
             print("Closing Serial...")
@@ -552,10 +556,10 @@ class OpenBCIBoard(object):
     # DEBBUGING: Prints individual incoming bytes
     #
     def print_bytes_in(self):
-        if not self.streaming:
+        if not cfg.streaming:
             self.ser.write(b'b')
-            self.streaming = True
-        while self.streaming:
+            cfg.streaming = True
+        while cfg.streaming:
             print(struct.unpack('B', self.ser.read())[0])
 
             '''Incoming Packet Structure:
@@ -563,7 +567,7 @@ class OpenBCIBoard(object):
           0xA0|0-255|8, 3-byte signed ints|3 2-byte signed ints|0xC0'''
 
     def print_packets_in(self):
-        while self.streaming:
+        while cfg.streaming:
             b = struct.unpack('B', self.ser.read())[0]
 
             if b == START_BYTE:
@@ -622,7 +626,7 @@ class OpenBCIBoard(object):
 
     def check_connection(self, interval=2, max_packets_to_skip=10):
         # stop checking when we're no longer streaming
-        if not self.streaming:
+        if not cfg.streaming:
             return
         # check number of dropped packages and establish connection problem if too large
         if self.packets_dropped > max_packets_to_skip:
@@ -640,7 +644,7 @@ class OpenBCIBoard(object):
         time.sleep(0.5)
         self.ser.write(b'b')
         time.sleep(0.5)
-        self.streaming = True
+        cfg.streaming = True
         # self.attempt_reconnect = False
 
     # Adds a filter at 60hz to cancel out ambient electrical noise

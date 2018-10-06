@@ -21,6 +21,8 @@ filteringEnabled = True
 logging = False
 baudrate = 115200
 
+debug = True
+
 # Impedance and auxiliaries are not used currently.
 #
 impedance = False
@@ -31,6 +33,10 @@ aux = False,
 timeout = 100
 
 scaling = 0
+
+# This is used to stop streaming when needed.
+#
+streaming = False
 
 # The default plugin is the one printing on the console.
 #

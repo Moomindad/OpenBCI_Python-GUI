@@ -29,12 +29,11 @@ from dictionary import Dictionary as dict
 class PluginChanCollectTrig(plugintypes.IPluginExtended):
     __main_instance__ = None
 
-    def __init__(self, file_name="chanpackets", delimiter=",", verbose=True):
+    def __init__(self, file_name="chanpackets", delimiter=' ', verbose=True):
 
         # Registering this instance in the config file.
         #
         cfg.plugin_instance = self
-
 
         # The y_value is used to store the current flag_value for the output categories in keras.
         #
@@ -78,8 +77,8 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
         # We also store it as numpy arrays.
         #
-        self.data_file_name_np = file_name + "-data-" + self.time_stamp
-        self.result_file_name_np = file_name + "-result-" + self.time_stamp
+        # self.data_file_name_np = file_name + "-data-" + self.time_stamp
+        # self.result_file_name_np = file_name + "-result-" + self.time_stamp
 
         # Store the starting time for the session
         #
@@ -93,12 +92,12 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
         # Collecting real data variables as well.
         #
-        self.data_arr_np = np.array([], int)
-        self.result_arr_np = np.array([], int)
+        # self.data_arr_np = np.array([], int)
+        # self.result_arr_np = np.array([], int)
 
         # We use a temporary variable to collect the packages
         #
-        self.arr_collector = np.array([], int)
+        # self.arr_collector = np.array([], int)
 
         self.t2 = 0.0
 
@@ -149,10 +148,16 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
             # self.trigger.studyStart()
 
-            # Open the file in append mode
+            # Open the file in append mode and write a first separator.
             #
             with open(self.data_file_name, 'a') as f:
-                f.write('%' + self.time_stamp + '\n')
+                f.write('% ' + self.time_stamp + '      Packet Size:    ' + str(self.pack_size +1) + '\n')
+                f.write(dict.get_string('packetsep') + '\n')
+
+            with open(self.result_file_name, 'a') as f:
+                f.write('% ' + self.time_stamp + '      Packet Size:    ' + str(self.pack_size + 1) + '\n')
+                f.write(dict.get_string('packetsep') + '\n')
+
 
     # The deactivate function is used to close down the plugin in a controlled way.
     #
@@ -163,7 +168,6 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         # Adjust the last delimiting commas, and add proper array ends.
         #
         self.data_arr_string = self.data_arr_string[:-2] + ']]\n'
-
         #
         # write last array, and then close the file. If written in TEXT format, the result is a string. Otherwise
         # it is saved in numpy format.
@@ -176,8 +180,8 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
             f.write(self.result_arr_string)
             f.close()
 
-        np.save(self.data_file_name_np, self.data_arr_np)
-        np.save(self.result_file_name_np, self.result_arr_np)
+        # np.save(self.data_file_name_np, self.data_arr_np)
+        # np.save(self.result_file_name_np, self.result_arr_np)
 
         print(dict.get_string('plugclose') + self.data_file_name)
         print(dict.get_string('checkarray'))
@@ -193,9 +197,10 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
     #
     def __call__(self, sample):
 
-        # if sample.channel_data == '':
-        #     self.deactivate()
-        #     exit()
+        if cfg.debug:
+            if sample.channel_data == '':
+                self.deactivate()
+                exit()
 
         # TODO this has to be implemented properly.
         #
@@ -224,17 +229,18 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         # =========================================================================
         # For every first row in the array, we will perform some initialisations.
         #
-        if self.first_row:
-            self.t2 = self.t
-
-            # Initialise each subarray with the proper delimiters
-            #
-            self.data_arr_string = '['  # First row has an extra '[' added to contain the pack. Level 2
-
-            # self.data_arr_np = np.array([])
-
-            self.first_row = False
-
+        # if self.first_row:
+        #
+        #     self.t2 = self.t
+        #
+        #     # Initialise each subarray with the proper delimiters
+        #     #
+        #     self.data_arr_string = ''  # First row has an extra '[' added to contain the pack. Level 2
+        #
+        #     # self.data_arr_np = np.array([])
+        #
+        #     self.first_row = False
+        #
         # Each row is then constructed separately and added to the resulting array.
         # ========================================================================
         # Since we use extra information about the row, we put it into an extra
@@ -250,12 +256,11 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         #      [resultlist]],
         # ]1
         #
-
         # =========================================================================
         # EVERY ROW
         # =========================================================================
         #
-        row = '['   # Level 4
+        row = ''   # Level 4
 
         # =========================================================================
         # COLLECTING SAMPLE DATA
@@ -264,13 +269,22 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         #
         # First the int data in a numpy array.
         #
-        self.int_row_np = np.array(sample.channel_data)  # TODO check the polarity. Is abs() necessary?
-
+        # self.int_row_np = np.array(sample.channel_data)  # TODO check the polarity. Is abs() necessary?
+        #
+        # writing one line
+        #
         for i in sample.channel_data:
-            row += str(abs(i))          # TODO likewise
-            row += self.delimiter       # Default delimiter is ','
+            with open(self.data_file_name, 'a') as f:
+                f.write(str(i) + self.delimiter)
 
-        row = row[:-1] + '],\n'     # Level 4. The slicing is necessary to take away a superfluous ','
+        with open(self.data_file_name, 'a') as f:
+                f.write('\n')
+
+
+            # row += str(abs(i))          # TODO likewise
+            # row += self.delimiter       # Default delimiter is ','
+
+        # row = row[:-1] + '],\n'     # Level 4. The slicing is necessary to take away a superfluous ','
                                     # before the last ']'
         #
         # =========================================================================
@@ -283,16 +297,14 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
 
         # Add the string version of the row.
         #
-        self.data_arr_string += row
+        # self.data_arr_string += row
 
         # Add the np component to the collector array.
         #
-        if np.size(self.arr_collector) == 0:
-            self.arr_collector = np.hstack((self.arr_collector, self.int_row_np))
-        else:
-            self.arr_collector = np.vstack((self.arr_collector, self.int_row_np))
-
-        delta_t = self.t - self.t2
+        # if np.size(self.arr_collector) == 0:
+        #     self.arr_collector = np.hstack((self.arr_collector, self.int_row_np))
+        # else:
+        #     self.arr_collector = np.vstack((self.arr_collector, self.int_row_np))
 
         # =========================================================================
         # EACH CHUNK
@@ -307,9 +319,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         #
         if self.no_of_packets > self.pack_size:
 
-            self.total_number_of_packets = self.total_number_of_packets +1
-            print(self.total_number_of_packets)
-
+            self.total_number_of_packets = self.total_number_of_packets + 1
 
             # TODO check this when running
             #
@@ -318,29 +328,27 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
             #
             # First the numpy data
             #
-            if np.size(self.data_arr_np) == 0:
-                self.data_arr_np = np.array(self.arr_collector)
-            else:
-                self.data_arr_np = np.vstack((self.data_arr_np, self.arr_collector))
-
-            self.result_arr_np = np.hstack((self.result_arr_np, np.array(self.trigger_value)))
+            # if np.size(self.data_arr_np) == 0:
+            #     self.data_arr_np = np.array(self.arr_collector)
+            # else:
+            #     self.data_arr_np = np.vstack((self.data_arr_np, self.arr_collector))
+            #
+            # self.result_arr_np = np.hstack((self.result_arr_np, np.array(self.trigger_value)))
 
             # Then the string data
             #
-            self.data_arr_string = self.data_arr_string[:-2] + '],\n'
+            # self.data_arr_string = self.data_arr_string[:-2] + '],\n'
 
             # Write the package content in string form to the file.
             #
             with open(self.data_file_name, 'a') as f:
-                f.write(self.data_arr_string)
+                f.write('% ' + str(self.total_number_of_packets) + dict.get_string('packetsep') + '\n')
 
             # Write the corresponding trigger value to the result file
             #
             with open(self.result_file_name, 'a') as f:
-                f.write(cfg.triggervalstr[self.trigger_value] + '\n')
+                f.write(str(self.total_number_of_packets) + ' ' + str(int(cfg.image_number * 10) + self.trigger_value) + '\n')
 
-            # Level 3 and 2
-            #
             # We just separate the eight first samples in each bunch into separate patterns
             #
             if self.trigger_value < 8:
@@ -350,7 +358,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
             #
             self.first_row = True
 
-            self.bLabel['text'] = str(delta_t)
+            self.bLabel['text'] = str(self.total_number_of_packets)
 
             self.no_of_packets = 0
 
@@ -441,4 +449,7 @@ class PluginChanCollectTrig(plugintypes.IPluginExtended):
         self.dLabel = ttk.Label(self.panel, text=str(self.pack_size + 1))
         self.dLabel.grid(column=1, row=1, sticky="WE")
 
+# ===========================================================
 # END OF FILE
+# ===========================================================
+

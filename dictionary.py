@@ -39,9 +39,12 @@ class Dictionary(object):
         ['nogang', 'Cannot handle Ganglion Board\n at the Moment.',
          'Ganglion board kan inte\nanvändas just nu.'],
         ['noport', 'Cannot find OpenBCI port', 'Kan inte hitta rätt OpenBCI port.'],
+        ['packets','Current packet size: ','Nuvarande paketstorlek: '],
+        ['packno', 'Number of processed packets: ', 'Antal processade paket: '],
         ['stalled', 'Device Stalled', 'Dataströmmen har upphört att sända.'],
         ['packtime', 'Desired time intervals in milliseconds: ', 'Önskad insamlingsintervaller i millisekunder: '],
         ['packets', 'Number of packets in bunch: ', 'Antal paket i bunten: '],
+        ['packetsep',' ================================================================= '],
         ['plugsclose', 'Closing, data saved to: ', "Stannar dataströmmen, data sparat på: "],
         ['plugs', 'Available Plugins', 'Tilläggsprogram'],
         ['selchan','Select channels to use:', 'Välj kanaler som ska användas:'],
@@ -49,6 +52,9 @@ class Dictionary(object):
         ['shapes', 'Shape Display', 'Testfönster'],
         ['stallwarn', 'Device appears to be stalled. Quitting...',
          'Dataströmmen verkar ha stannat av. Avslutar!'],
+        ['studyinstr', 'Welcome to my EEG study.\n\r You will be shown several screens of stimuli with ' \
+                            ' a black screen in between.\n\r Please simply focus on the screen.\n\r\n\r ' \
+                            'Press Enter to start the study.'],
         ['tooltipport', 'For Cyton, port to connect to OpenBCI Dongle \n' +
          '(e.g., "/dev/ttyUSB0" or "/dev/tty.usbserial-*"). For\n' +
          'Ganglion, MAC address of the board. For both, \n' +

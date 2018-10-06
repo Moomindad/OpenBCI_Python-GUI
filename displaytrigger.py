@@ -4,6 +4,8 @@ import glob
 from PIL import Image, ImageTk
 import random
 
+from dictionary import Dictionary as dict
+
 import config as cfg
 
 #from yapsy.PluginManager import PluginManager
@@ -12,6 +14,7 @@ import config as cfg
 # Constant definitions
 #
 TIME = [
+    1,
     3,
     5,
     10,
@@ -150,6 +153,8 @@ class StudyGui(object):
             show_image(event=None)
 
         def stop_study():
+            cfg.eeg.stop_streaming()        # To stop we first stop streaming.
+            self.study_screen.destroy()
             self.study_window.destroy()
             cfg.plugin_instance.deactivate()
 
@@ -162,23 +167,24 @@ class StudyGui(object):
             #     return
 
             # cfg.image_number = im_counter
+            # If we have gone through all images, we have to restart from the beginning.
+            #
+            if cfg.image_number > len(self.image_dict) - 1:
+                cfg.image_number = 0
 
             if self.order_var.get() == 0:                     # Show the images in the given order.
-                if cfg.image_number < len(self.image_dict):
-                        self.im = self.image_dict[str(cfg.image_number * 10)]
-                        self.image_label.configure(image=self.im)
-                        cfg.image_shown = True                # This will be set to false for black background inbetween
-                        cfg.new_image = True                  # This will be reset by the first call
-                        cfg.image_number += 1
-                        self.study_screen.after(self.time_var.get() * 1000, showBlack, cfg.image_number)
+                self.im = self.image_dict[str(cfg.image_number * 10)]
+                self.image_label.configure(image=self.im)
+                cfg.image_shown = True                # This will be set to false for black background inbetween
+                cfg.new_image = True                  # This will be reset by the first call
+                cfg.image_number += 1
+                self.study_screen.after(self.time_var.get() * 1000, showBlack, cfg.image_number)
 
             else:                                             # Use the randomised list
-                if cfg.image_number < len(self.image_dict):
-                    self.im = self.image_dict[self.ran_list[cfg.image_number]]
-                    self.image_label.configure(image=self.im)
-                    cfg.image_number += 1
-                    self.study_screen.after(self.time_var.get() * 1000, showBlack, cfg.image_number)
-
+                self.im = self.image_dict[self.ran_list[cfg.image_number]]
+                self.image_label.configure(image=self.im)
+                cfg.image_number += 1
+                self.study_screen.after(self.time_var.get() * 1000, showBlack, cfg.image_number)
 
         def randomize(self):
             key_list = list(self.image_dict.keys())
@@ -204,29 +210,28 @@ class StudyGui(object):
                 self.image_dict[str(i*10)] = x
             return self.image_dict
 
-        def destroyWindow():
-            self.study_screen.destroy()
-
         self.study_screen = Toplevel(bg='black')
 
         # Make sure the the window is in fullscreen mode.
         #
-        self.w, self.h = self.study_screen.winfo_screenwidth(), self.study_screen.winfo_screenheight()
+        if cfg.debug:
+            self.w = 400
+            self.h = 300
+        else:
+            self.w, self.h = self.study_screen.winfo_screenwidth(), self.study_screen.winfo_screenheight()
+
         self.study_screen.overrideredirect(1)
         self.study_screen.geometry("%dx%d+0+0" % (self.w, self.h))
 
         # Make the new window focused.
         #
         self.study_screen.focus_set()  # <-- move focus to this widget
-        self.instr_txt='Welcome to my EEG study.\n\r You will be shown several screens of stimuli with ' \
-                            ' a black screen in between.\n\r Please simply focus on the screen.\n\r\n\r ' \
-                            'Press Enter to start the study.'
 
         # TODO externalise string
-
+        #
         # Write the study instructions
         #
-        self.study_instructions = Label(self.study_screen, text=self.instr_txt)
+        self.study_instructions = Label(self.study_screen, text=dict.get_string('studyinstr'))
         self.study_instructions.config(fg='white', bg='black', pady=500, font=('Palatino', 28))
         self.study_instructions.pack()
         self.image_label = Label(self.study_screen)
